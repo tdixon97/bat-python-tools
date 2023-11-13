@@ -9,11 +9,12 @@ import numpy as np
 import tol_colors as tc
 import hist
 import argparse
+import re
+import utils
 
 vset = tc.tol_cset('vibrant')
 mset = tc.tol_cset('muted')
 plt.rc('axes', prop_cycle=plt.cycler('color', list(vset)))
-# mpl.rcParams["font.size"] = 8
 
 
 style = {
@@ -123,6 +124,8 @@ xhigh=args.upper_x
 ylowlim =0.05
 scale=args.scale
 outfile=args.out_file
+first_index =utils.find_and_capture(outfile,"hmixfit-")
+name_out = outfile[first_index:-16]
 def get_hist(obj):
     return obj.to_hist()[552:2982][hist.rebin(15)]
 
@@ -132,7 +135,9 @@ if det_type=="all":
 else:
     datasets=["l200a_taup_silver_dataset_{}".format(det_type)]
     labels=["{} detectors after QC".format(det_type)]
-print(datasets)
+
+
+
 y=6
 if det_type!="all":
     y=4
@@ -210,11 +215,10 @@ with uproot.open(outfile) as f:
 
             plt.tight_layout()
 
-#plt.subplots_adjust(hspace=0)
+
 plt.tight_layout()
 
-plt.savefig("l200a-taup-bkg-model_{}_{}_{}_to_{}.pdf".format(det_type,scale,xlow,xhigh))
-#plt.savefig("l200a-taup-bkg-model.png")
-#plt.show()
+plt.savefig("plots/{}_{}_{}_{}_to_{}.pdf".format(name_out,det_type,scale,xlow,xhigh))
+
 
 
