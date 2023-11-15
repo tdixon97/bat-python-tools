@@ -107,10 +107,11 @@ def plot_two_dim(varx:np.ndarray,vary:np.ndarray,rangex:tuple,rangey:tuple,title
     axes.set_ylabel(titley)
     axes.set_title(title)
 
-    plt.show()
+  
 
     correlation_coefficient = np.corrcoef(varx, vary)[0, 1]
 
     # Annotate the plot with correlation coefficient
     correlation_text = f'Correlation: {correlation_coefficient:.2f}'
-    axes.annotate(correlation_text, xy=(0.7, 0.95), xycoords='axes fraction', fontsize=10, color='white')
+    axes.annotate("Correlation = {:0.2f}".format(correlation_coefficient), (0.6, 0.88), xycoords="axes fraction", fontsize=10)
+    plt.show()
