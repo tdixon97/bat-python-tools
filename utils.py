@@ -38,10 +38,10 @@ def format_latex(list_str):
     list_new=[]
     for text in list_str:
         modified_string =text.replace("Pb214", "$^{214}$Pb")
-        modified_string =text.replace("2vbb", "$2\\nu\\beta\\beta$")
+        modified_string =modified_string.replace("2vbb", "$2\\nu\\beta\\beta$")
 
-        modified_string=modified_string.replace("Bi214","$^{214}$Bi")
-        modified_string=modified_string.replace("Tl208","$^{214}$Bi")
+        modified_string=modified_string.replace("Bi214","Bi")
+        modified_string=modified_string.replace("Tl208","$^{208}$Tl")
         modified_string=modified_string.replace("K40","$^{40}$K")
         modified_string=modified_string.replace("K42","$^{42}$K")
         modified_string=modified_string.replace("Bi212","$^{212}$Bi")
@@ -116,7 +116,7 @@ def plot_two_dim(varx:np.ndarray,vary:np.ndarray,rangex:tuple,rangey:tuple,title
   
 
     correlation_coefficient = np.corrcoef(varx, vary)[0, 1]
-    print("rho({},{}) = {:0.2f}".format(titlex,titley,correlation_coefficient))
+
     # Annotate the plot with correlation coefficient
     if (show==True):
         axes.annotate("Correlation = {:0.2f}".format(correlation_coefficient), (0.6, 0.88), xycoords="axes fraction", fontsize=10)
@@ -125,7 +125,7 @@ def plot_two_dim(varx:np.ndarray,vary:np.ndarray,rangex:tuple,rangey:tuple,title
         plt.close()
     return correlation_coefficient
 
-def plot_correlation_matrix(corr_matrix:np.ndarray,title:str):
+def plot_correlation_matrix(corr_matrix:np.ndarray,title:str,save:str):
     """
     Plots a correlation matrix 
 
@@ -143,7 +143,37 @@ def plot_correlation_matrix(corr_matrix:np.ndarray,title:str):
     
     # Add a colorbar
     cbar = fig.colorbar(cax)
-    cbar.set_label('Correlation')
+    #cbar.set_label('Correlation')
     plt.grid()
     # Show the plot
+    plt.savefig(save)
+    plt.show()
+    
+
+
+def plot_table(df,save):
+    """ Plot a df as a table"""
+    # Create a DataFrame
+
+
+    # Plot a table
+    fig, ax = plt.subplots(figsize=(2, 6))  # Adjust the figsize as needed
+    ax.axis('off')  # Turn off axis labels
+
+    # Create the table
+    table_data = df.T.reset_index().values
+    print(table_data)
+    table = ax.table(cellText=df.values,colLabels= df.keys(), cellLoc='center', loc='center',colWidths=(0.2,0.8))
+
+    # Style the table
+    table.auto_set_font_size(True)
+    ax.xaxis.grid(False)
+    ax.yaxis.grid(False)
+    ax.xaxis.set_visible(False)
+    ax.yaxis.set_visible(False)
+
+    table.set_zorder(100)
+    
+    # Show the plot
+    plt.savefig(save)
     plt.show()
