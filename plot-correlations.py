@@ -106,7 +106,6 @@ utils.plot_table(df_key_K,"plots/key_K_{}.pdf".format(tree_name))
 ##3) 214Bi + 214 Bi
 ##4) 40K
 ###5) 42K
-print(df.keys())
 matrix = np.zeros(shape=(len(df.keys()),len(df.keys())))
 
 ### make the full matrix
@@ -137,6 +136,11 @@ if (make_plots==True):
         j+=1
         
 matrix=np.array(matrix)
+for n in range(5):
+    cor,i,j = utils.get_nth_largest(matrix,n)
+    
+    print("{}: {} to {} = {:0.2f} ".format(n,labels[i],labels[j],cor))
+    utils.plot_corr(df,i,j,labels)
 utils.plot_correlation_matrix(matrix,"","plots/Full_matrix_{}.pdf".format(tree_name),show=True)
 utils.plot_correlation_matrix(utils.twoD_slice(matrix,index_U),"","plots/Matrix_U_{}.pdf".format(tree_name))
 utils.plot_correlation_matrix(utils.twoD_slice(matrix,index_Th),"","plots/Matrix_Th_{}.pdf".format(tree_name))

@@ -165,7 +165,7 @@ def plot_table(df,save):
 
     # Create the table
     table_data = df.T.reset_index().values
-    print(len(df.values))
+    
     table = ax.table(cellText=df.values,colLabels= df.keys(), cellLoc='center', loc='center',colWidths=(0.2,0.8))
 
     # Style the table
@@ -187,3 +187,31 @@ def twoD_slice(matrix,index):
     matrix_new=matrix[:,index]
     matrix_new = matrix_new[index,:]
     return matrix_new
+
+def get_nth_largest(matrix,n):
+    """
+    Get the nth largest element in the matrix and its index
+    """
+    sort_m=-matrix
+    for i in range(matrix.shape[0]):
+        for j in range(matrix.shape[1]):
+                if (i>=j):
+                    sort_m[i,j]=0
+    indices_nth_largest = np.argsort(sort_m.flatten())[-(n+1)]
+    
+    row_indices, col_indices = np.unravel_index(indices_nth_largest, matrix.shape)  
+    
+    return sort_m[row_indices,col_indices],row_indices,col_indices
+
+def plot_corr(df,i,j,labels):
+    key1=df.keys()[i]
+    key2=df.keys()[j]
+    x=np.array(df[key1])
+    y=np.array(df[key2])
+    rangex=(0,max(x))
+    rangey=(0,max(y))
+    bins=(100,100)
+        
+    cor=plot_two_dim(x,y,rangex,rangey,"{} [1/yr]".format(labels[i]),
+                                                    "{} [1/yr]".format(labels[j]),
+                                                    "{} vs {}".format(labels[i],labels[j]),bins)
