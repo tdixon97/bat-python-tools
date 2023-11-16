@@ -48,35 +48,40 @@ tree= "{}_mcmc".format(tree_name)
 df =utils.ttree2df(outfile,tree)
 df=df.query("Phase==1")
 
-print(df)
-df=df.drop(columns=['Chain','Iteration','Phase','LogProbability','LogLikelihood','LogPrior'])
-x=np.array(df["Pb214Bi214_pen_plates"])
-y=np.array(df["Pb214Bi214_wls_reflector"])
-rangex=(0,max(x))
-rangey=(0,max(y))
-bins=(100,100)
-cor=utils.plot_two_dim(x,y,rangex,rangey,"$^{214}$Pb+Bi pen plates [decays/yr]","$^{214}$Pb+Bi wls reflector [decays/yr]","",bins)
-utils.plot_correlation_matrix(np.array([[1,cor],[cor,1]]),"test correlation matrix")
+
+df=df.drop(columns=['Chain','Iteration','Phase','LogProbability','LogLikelihood','LogPrior','Ar39_homogeneous'])
+
 
 ### make the full correlation matrix
 print(df.keys())
+matrix = np.zeros(shape=(len(df.keys()),len(df.keys())))
 
-"""
-with uproot.open(outfile) as f:
-    
-    for key in f.keys():
-        histo =f[key].to_hist()
-        
-
-        fig, axes = lps.subplots(1, 1, figsize=(6, 4), sharex=True)
-        print(key)
-        print(key[0]+key[1])
-       
-        if (key[0]+key[1]=="h1"):
-            histo.plot(ax=axes,**style_1d)
+### make the full matrix
+labels=utils.format_latex(df.keys())
+i=0
+j=0
+for key1 in df.keys():
+    i=0
+    for key2 in df.keys():
+        if (i>j):
+            continue
+        x=np.array(df[key1])
+        y=np.array(df[key2])
+        rangex=(0,max(x))
+        rangey=(0,max(y))
+        bins=(100,100)
+        if (key1!=key2):
+            print("{} [1/yr]".format(labels[i]))
+            cor=utils.plot_two_dim(x,y,rangex,rangey,"{} [1/yr]".format(labels[i]),
+                                                 "{} [1/yr]".format(labels[j]),
+                                                 "{} vs {}".format(labels[i],labels[j]),bins)
         else:
-            histo.plot2d(ax=axes,**style_2d)
-        substring = key[:-2]
-        plt.savefig("plots"+"/"+substring+".pdf")
+            cor=1
+        
+        matrix[i,j]=cor
+        matrix[j,i]=cor
+        #print("Correlation {} to {} = {"0}")
+        i+=1
+    j+=1
 
-"""
+utils.plot_correlation_matrix(matrix,"")

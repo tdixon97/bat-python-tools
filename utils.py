@@ -34,14 +34,19 @@ def manipulate_title(text:str):
         
 
 def format_latex(list_str):
+    """Format a string as latex with the radioisotopes formatted"""
     list_new=[]
     for text in list_str:
         modified_string =text.replace("Pb214", "$^{214}$Pb")
+        modified_string =text.replace("2vbb", "$2\\nu\\beta\\beta$")
+
         modified_string=modified_string.replace("Bi214","$^{214}$Bi")
         modified_string=modified_string.replace("Tl208","$^{214}$Bi")
         modified_string=modified_string.replace("K40","$^{40}$K")
         modified_string=modified_string.replace("K42","$^{42}$K")
         modified_string=modified_string.replace("Bi212","$^{212}$Bi")
+        modified_string=modified_string.replace("Ac228","$^{228}$Ac")
+        modified_string=modified_string.replace("Ar39","$^{39}$Ar")
 
         list_new.append(modified_string)
     return list_new
@@ -80,7 +85,7 @@ def ttree2df(filename:str,tree_name:str)->pd.DataFrame:
 
 
 
-def plot_two_dim(varx:np.ndarray,vary:np.ndarray,rangex:tuple,rangey:tuple,titlex:str,titley:str,title:str,bins:tuple):
+def plot_two_dim(varx:np.ndarray,vary:np.ndarray,rangex:tuple,rangey:tuple,titlex:str,titley:str,title:str,bins:tuple,show=False):
     """
     A 2D scatter plot
     Parameters:
@@ -98,22 +103,26 @@ def plot_two_dim(varx:np.ndarray,vary:np.ndarray,rangex:tuple,rangey:tuple,title
 
     ## create the axis
 
-    fig, axes = lps.subplots(1, 1, figsize=(4,6), sharex=True, gridspec_kw = {'hspace': 0})
+    if (show==True):
+        fig, axes = lps.subplots(1, 1, figsize=(4,6), sharex=True, gridspec_kw = {'hspace': 0})
 
-    h = axes.hist2d(varx,vary, bins=bins, cmap='viridis', range=[rangex,rangey], cmin=1)
+        h = axes.hist2d(varx,vary, bins=bins, cmap='viridis', range=[rangex,rangey], cmin=1)
 
-    fig.colorbar(h[3], ax=axes, label='Counts')
-    axes.set_xlabel(titlex)
-    axes.set_ylabel(titley)
-    axes.set_title(title)
+        #fig.colorbar(h[3], ax=axes, label='Counts')
+        axes.set_xlabel(titlex)
+        axes.set_ylabel(titley)
+        axes.set_title(title)
 
   
 
     correlation_coefficient = np.corrcoef(varx, vary)[0, 1]
-
+    print("rho({},{}) = {:0.2f}".format(titlex,titley,correlation_coefficient))
     # Annotate the plot with correlation coefficient
-    axes.annotate("Correlation = {:0.2f}".format(correlation_coefficient), (0.6, 0.88), xycoords="axes fraction", fontsize=10)
-    plt.show()
+    if (show==True):
+        axes.annotate("Correlation = {:0.2f}".format(correlation_coefficient), (0.6, 0.88), xycoords="axes fraction", fontsize=10)
+    
+        plt.show()
+        plt.close()
     return correlation_coefficient
 
 def plot_correlation_matrix(corr_matrix:np.ndarray,title:str):
@@ -135,5 +144,6 @@ def plot_correlation_matrix(corr_matrix:np.ndarray,title:str):
     # Add a colorbar
     cbar = fig.colorbar(cax)
     cbar.set_label('Correlation')
+    plt.grid()
     # Show the plot
     plt.show()
