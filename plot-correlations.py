@@ -137,7 +137,7 @@ if (make_plots==True):
         j+=1
         
 matrix=np.array(matrix)
-utils.plot_correlation_matrix(matrix,"","plots/Full_matrix_{}.pdf".format(tree_name))
+utils.plot_correlation_matrix(matrix,"","plots/Full_matrix_{}.pdf".format(tree_name),show=True)
 utils.plot_correlation_matrix(utils.twoD_slice(matrix,index_U),"","plots/Matrix_U_{}.pdf".format(tree_name))
 utils.plot_correlation_matrix(utils.twoD_slice(matrix,index_Th),"","plots/Matrix_Th_{}.pdf".format(tree_name))
 utils.plot_correlation_matrix(utils.twoD_slice(matrix,index_K),"","plots/Matrix_K_{}.pdf".format(tree_name))

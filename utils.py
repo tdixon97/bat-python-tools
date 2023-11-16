@@ -125,7 +125,7 @@ def plot_two_dim(varx:np.ndarray,vary:np.ndarray,rangex:tuple,rangey:tuple,title
         plt.close()
     return correlation_coefficient
 
-def plot_correlation_matrix(corr_matrix:np.ndarray,title:str,save:str):
+def plot_correlation_matrix(corr_matrix:np.ndarray,title:str,save:str,show=False):
     """
     Plots a correlation matrix 
 
@@ -134,7 +134,7 @@ def plot_correlation_matrix(corr_matrix:np.ndarray,title:str,save:str):
     """
 
     # Set up the matplotlib figure
-    fig, axes = lps.subplots(1, 1, figsize=(4, 4), sharex=True, gridspec_kw = {'hspace': 0})
+    fig, axes = lps.subplots(1, 1, figsize=(6, 4), sharex=True, gridspec_kw = {'hspace': 0})
 
 
     # Create a heatmap
@@ -142,16 +142,17 @@ def plot_correlation_matrix(corr_matrix:np.ndarray,title:str,save:str):
     axes.set_title(title)
     
     # Add a colorbar
-    cbar = fig.colorbar(cax)
+    cbar = fig.colorbar(cax,shrink=1.0)
     
     cbar.set_label('$\\rho$')
     plt.grid()
     # Show the plot
     plt.savefig(save)
     
-
-    plt.close()
-
+    if (show==False):
+        plt.close()
+    else:
+        plt.show()
 
 def plot_table(df,save):
     """ Plot a df as a table"""
@@ -159,12 +160,12 @@ def plot_table(df,save):
 
 
     # Plot a table
-    fig, ax = plt.subplots(figsize=(2, 6))  # Adjust the figsize as needed
+    fig, ax = plt.subplots(figsize=(2, 6*len(df.values)/29))  # Adjust the figsize as needed
     ax.axis('off')  # Turn off axis labels
 
     # Create the table
     table_data = df.T.reset_index().values
-    print(table_data)
+    print(len(df.values))
     table = ax.table(cellText=df.values,colLabels= df.keys(), cellLoc='center', loc='center',colWidths=(0.2,0.8))
 
     # Style the table
