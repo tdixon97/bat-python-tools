@@ -143,12 +143,14 @@ def plot_correlation_matrix(corr_matrix:np.ndarray,title:str,save:str):
     
     # Add a colorbar
     cbar = fig.colorbar(cax)
-    #cbar.set_label('Correlation')
+    
+    cbar.set_label('$\\rho$')
     plt.grid()
     # Show the plot
     plt.savefig(save)
-    plt.show()
     
+
+    plt.close()
 
 
 def plot_table(df,save):
@@ -176,4 +178,11 @@ def plot_table(df,save):
     
     # Show the plot
     plt.savefig(save)
-    plt.show()
+    plt.close()
+    
+
+def twoD_slice(matrix,index):
+    index=np.array(index)
+    matrix_new=matrix[:,index]
+    matrix_new = matrix_new[index,:]
+    return matrix_new

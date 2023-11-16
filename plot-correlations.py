@@ -58,16 +58,14 @@ df=df.drop(columns=['Chain','Iteration','Phase','LogProbability','LogLikelihood'
 names={"Index":[],"Name":[]}
 names_U={"Index":[],"Name":[]}
 names_Th={"Index":[],"Name":[]}
-names_K40={"Index":[],"Name":[]}
-names_K42={"Index":[],"Name":[]}
+names_K={"Index":[],"Name":[]}
 
 i=0
 labels=utils.format_latex(df.keys())
 
 index_U = []
 index_Th =[]
-index_K40=[]
-index_K42=[]
+index_K=[]
 
 ### probably can be done smarter!
 for key in df.keys():
@@ -81,14 +79,11 @@ for key in df.keys():
         names_Th['Name'].append(labels[i])
         names_Th["Index"].append(len(index_Th))
         index_Th.append(i)
-    elif(key.find("K40")!=-1):
-        names_K40['Name'].append(labels[i])
-        names_K40["Index"].append(len(index_K40))
-        index_K40.append(i)
-    elif(key.find("K42")!=-1):
-        names_K42['Name'].append(labels[i])
-        names_K42["Index"].append(len(index_K42))
-        index_K42.append(i)
+    elif(key.find("K")!=-1):
+        names_K['Name'].append(labels[i])
+        names_K["Index"].append(len(index_K))
+        index_K.append(i)
+   
         
     
     i=i+1
@@ -101,11 +96,8 @@ utils.plot_table(df_key_U,"plots/key_U_{}.pdf".format(tree_name))
 df_key_Th = pd.DataFrame(names_Th)
 utils.plot_table(df_key_Th,"plots/key_Th_{}.pdf".format(tree_name))
 
-df_key_K40 = pd.DataFrame(names_K40)
-utils.plot_table(df_key_K40,"plots/key_K40_{}.pdf".format(tree_name))
-
-df_key_K42 = pd.DataFrame(names_K42)
-utils.plot_table(df_key_K42,"plots/key_K42_{}.pdf".format(tree_name))
+df_key_K = pd.DataFrame(names_K)
+utils.plot_table(df_key_K,"plots/key_K_{}.pdf".format(tree_name))
 
 
 ### make the full correlation matrix and subplots
@@ -143,13 +135,11 @@ if (make_plots==True):
             
             i+=1
         j+=1
-
+        
+matrix=np.array(matrix)
 utils.plot_correlation_matrix(matrix,"","plots/Full_matrix_{}.pdf".format(tree_name))
-
-utils.plot_correlation_matrix(matrix[index_U,index_U],"","plots/U_matrix_{}.pdf".format(tree_name))
-print(matrix[index_U,index_U])
-utils.plot_correlation_matrix(matrix[index_Th,index_Th],"","plots/Th_matrix_{}.pdf".format(tree_name))
-utils.plot_correlation_matrix(matrix[index_K40,index_K40],"","plots/K40_matrix_{}.pdf".format(tree_name))
-utils.plot_correlation_matrix(matrix[index_K42,index_K42],"","plots/K42_matrix_{}.pdf".format(tree_name))
+utils.plot_correlation_matrix(utils.twoD_slice(matrix,index_U),"","plots/Matrix_U_{}.pdf".format(tree_name))
+utils.plot_correlation_matrix(utils.twoD_slice(matrix,index_Th),"","plots/Matrix_Th_{}.pdf".format(tree_name))
+utils.plot_correlation_matrix(utils.twoD_slice(matrix,index_K),"","plots/Matrix_K_{}.pdf".format(tree_name))
 
 
