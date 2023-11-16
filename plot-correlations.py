@@ -49,12 +49,18 @@ df =utils.ttree2df(outfile,tree)
 df=df.query("Phase==1")
 
 print(df)
+df=df.drop(columns=['Chain','Iteration','Phase','LogProbability','LogLikelihood','LogPrior'])
 x=np.array(df["Pb214Bi214_pen_plates"])
 y=np.array(df["Pb214Bi214_wls_reflector"])
 rangex=(0,max(x))
 rangey=(0,max(y))
 bins=(100,100)
-utils.plot_two_dim(x,y,rangex,rangey,"$^{214}$Pb+Bi pen plates [decays/yr]","$^{214}$Pb+Bi wls reflector [decays/yr]","",bins)
+cor=utils.plot_two_dim(x,y,rangex,rangey,"$^{214}$Pb+Bi pen plates [decays/yr]","$^{214}$Pb+Bi wls reflector [decays/yr]","",bins)
+utils.plot_correlation_matrix(np.array([[1,cor],[cor,1]]),"test correlation matrix")
+
+### make the full correlation matrix
+print(df.keys())
+
 """
 with uproot.open(outfile) as f:
     

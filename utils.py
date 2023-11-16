@@ -98,7 +98,7 @@ def plot_two_dim(varx:np.ndarray,vary:np.ndarray,rangex:tuple,rangey:tuple,title
 
     ## create the axis
 
-    fig, axes = lps.subplots(1, 1, figsize=(6, 4), sharex=True, gridspec_kw = {'hspace': 0})
+    fig, axes = lps.subplots(1, 1, figsize=(4,6), sharex=True, gridspec_kw = {'hspace': 0})
 
     h = axes.hist2d(varx,vary, bins=bins, cmap='viridis', range=[rangex,rangey], cmin=1)
 
@@ -112,6 +112,28 @@ def plot_two_dim(varx:np.ndarray,vary:np.ndarray,rangex:tuple,rangey:tuple,title
     correlation_coefficient = np.corrcoef(varx, vary)[0, 1]
 
     # Annotate the plot with correlation coefficient
-    correlation_text = f'Correlation: {correlation_coefficient:.2f}'
     axes.annotate("Correlation = {:0.2f}".format(correlation_coefficient), (0.6, 0.88), xycoords="axes fraction", fontsize=10)
+    plt.show()
+    return correlation_coefficient
+
+def plot_correlation_matrix(corr_matrix:np.ndarray,title:str):
+    """
+    Plots a correlation matrix 
+
+    Parameters:
+    - corr_matrix (numpy.ndarray): 2D NumPy array representing the correlation matrix.
+    """
+
+    # Set up the matplotlib figure
+    fig, axes = lps.subplots(1, 1, figsize=(4, 4), sharex=True, gridspec_kw = {'hspace': 0})
+
+
+    # Create a heatmap
+    cax = axes.matshow(corr_matrix, cmap='coolwarm',vmin=-1,vmax=1)
+    axes.set_title(title)
+    
+    # Add a colorbar
+    cbar = fig.colorbar(cax)
+    cbar.set_label('Correlation')
+    # Show the plot
     plt.show()
