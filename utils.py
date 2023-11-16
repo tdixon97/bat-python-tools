@@ -85,7 +85,7 @@ def ttree2df(filename:str,tree_name:str)->pd.DataFrame:
 
 
 
-def plot_two_dim(varx:np.ndarray,vary:np.ndarray,rangex:tuple,rangey:tuple,titlex:str,titley:str,title:str,bins:tuple,show=False):
+def plot_two_dim(varx:np.ndarray,vary:np.ndarray,rangex:tuple,rangey:tuple,titlex:str,titley:str,title:str,bins:tuple,show=False,save=""):
     """
     A 2D scatter plot
     Parameters:
@@ -106,13 +106,13 @@ def plot_two_dim(varx:np.ndarray,vary:np.ndarray,rangex:tuple,rangey:tuple,title
     if (show==True):
         fig, axes = lps.subplots(1, 1, figsize=(4,6), sharex=True, gridspec_kw = {'hspace': 0})
 
-        h = axes.hist2d(varx,vary, bins=bins, cmap='viridis', range=[rangex,rangey], cmin=1)
+        h = axes.hist2d(varx,vary, bins=bins, cmap='viridis', range=[rangex,rangey], cmin=1,edgecolor='none')
 
         #fig.colorbar(h[3], ax=axes, label='Counts')
         axes.set_xlabel(titlex)
         axes.set_ylabel(titley)
         axes.set_title(title)
-
+        plt.grid()
   
 
     correlation_coefficient = np.corrcoef(varx, vary)[0, 1]
@@ -120,9 +120,10 @@ def plot_two_dim(varx:np.ndarray,vary:np.ndarray,rangex:tuple,rangey:tuple,title
     # Annotate the plot with correlation coefficient
     if (show==True):
         axes.annotate("Correlation = {:0.2f}".format(correlation_coefficient), (0.6, 0.88), xycoords="axes fraction", fontsize=10)
-    
-        plt.show()
+        plt.savefig(save)
+        
         plt.close()
+
     return correlation_coefficient
 
 def plot_correlation_matrix(corr_matrix:np.ndarray,title:str,save:str,show=False):
@@ -197,13 +198,14 @@ def get_nth_largest(matrix,n):
         for j in range(matrix.shape[1]):
                 if (i>=j):
                     sort_m[i,j]=0
+    
     indices_nth_largest = np.argsort(sort_m.flatten())[-(n+1)]
     
     row_indices, col_indices = np.unravel_index(indices_nth_largest, matrix.shape)  
     
     return sort_m[row_indices,col_indices],row_indices,col_indices
 
-def plot_corr(df,i,j,labels):
+def plot_corr(df,i,j,labels,save):
     key1=df.keys()[i]
     key2=df.keys()[j]
     x=np.array(df[key1])
@@ -214,4 +216,4 @@ def plot_corr(df,i,j,labels):
         
     cor=plot_two_dim(x,y,rangex,rangey,"{} [1/yr]".format(labels[i]),
                                                     "{} [1/yr]".format(labels[j]),
-                                                    "{} vs {}".format(labels[i],labels[j]),bins)
+                                                    "{} vs {}".format(labels[i],labels[j]),bins,True,save)
