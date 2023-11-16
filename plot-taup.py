@@ -34,6 +34,10 @@ parser.add_argument('-u','--upper_x', type=int, help='Upper range',default=3000)
 parser.add_argument("-s","--scale",type=str,help="Scale",default="log")
 parser.add_argument("-o","--out_file",type=str,help="file",default="../results/hmixfit-l200a-taup-silver-dataset-m1-histograms.root")
 parser.add_argument("-c","--components",type=str,help="json components config file path",default="components.json")
+parser.add_argument("-b","--bins",type=int,help="Binning",default=15)
+
+
+### read the arguments
 
 
 args = parser.parse_args()
@@ -46,12 +50,15 @@ outfile=args.out_file
 first_index =utils.find_and_capture(outfile,"hmixfit-")
 name_out = outfile[first_index:-16]
 json_file =args.components
+bin = args.bins
+
+
 
 with open(json_file, 'r') as file:
     components = json.load(file, object_pairs_hook=OrderedDict)
 
 def get_hist(obj):
-    return obj.to_hist()[200:2982][hist.rebin(15)]
+    return obj.to_hist()[132:2982][hist.rebin(bin)]
 
 if det_type=="all":
     datasets = ["l200a_taup_silver_dataset_bege", "l200a_taup_silver_dataset_icpc","l200a_taup_silver_dataset_ppc","l200a_taup_silver_dataset_coax"]
@@ -66,19 +73,23 @@ y=6
 if det_type!="all":
     y=4
 
+
+
+## create the axes
 if (det_type=="all"):
     fig, axes = lps.subplots(len(datasets), 1, figsize=(6, y), sharex=True, gridspec_kw = {'hspace': 0})
 else:
     fig, axes_full = lps.subplots(len(datasets)+1, 1, figsize=(6, y), sharex=True, gridspec_kw = { 'height_ratios': [8, 2],"hspace":0})
 
 if det_type=="all":
-    
     for ax in axes:
         ax.set_axisbelow(True)
         ax.tick_params(axis="both", which="both", direction="in")
 else:
     axes=np.array([axes_full[0]])
     
+
+### create the plot
 with uproot.open(outfile) as f:
     for ds, ax, title in zip(datasets, axes.flatten(), labels):
         for comp, info in components.items():
@@ -110,7 +121,8 @@ with uproot.open(outfile) as f:
             ax.set_legend_logo(position='upper right', logo_type = 'preliminary', scaling_factor=7)
         else:
             ax.xaxis.set_tick_params(top=False)
-            ax.annotate(title, (0.02, 0.88), xycoords="axes fraction", fontsize=8)
+
+        ax.annotate(title, (0.02, 0.88), xycoords="axes fraction", fontsize=8)
 
         
         masked_values = np.ma.masked_where((bins > xhigh)  | (bins < xlow), pred)
@@ -118,9 +130,13 @@ with uproot.open(outfile) as f:
 
         maxi = max(masked_values.max(),masked_values_data.max())
         max_y = maxi+2*np.sqrt(maxi)+1
+        if (scale=="log"):
+            max_y=3*max_y
+            
         ax.set_yscale("linear")
         ax.set_ylim(bottom=ylowlim,top=max_y)      
-        #ax.set_xlabel("Energy (keV)")
+        if (det_type=="all"):
+            ax.set_xlabel("Energy (keV)")
         ax.set_ylabel("Counts / 15 keV")
         ax.set_yscale(scale)
         ax.set_xlim(xlow,xhigh)
