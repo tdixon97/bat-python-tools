@@ -222,7 +222,8 @@ def plot_corr(df,i,j,labels,save):
     
 
 
-def make_error_bar_plot(indexs,labels:list,y:np.ndarray,ylow:np.ndarray,yhigh:np.ndarray,data,name_out,obj):
+def make_error_bar_plot(indexs,labels:list,y:np.ndarray,ylow:np.ndarray,yhigh:np.ndarray,data,name_out,obj,
+                        y2=None,ylow2=None,yhigh2=None,label1=None,label2=None,extra=None,do_comp=0):
     """
     Make the error bar plot
     """
@@ -233,11 +234,32 @@ def make_error_bar_plot(indexs,labels:list,y:np.ndarray,ylow:np.ndarray,yhigh:np
     labels=labels[indexs]
     ylow=ylow[indexs]
     yhigh=yhigh[indexs]
+
+    if (do_comp==True):
+        
+        ylow2=ylow2[indexs]
+        yhigh2=yhigh2[indexs]
+        y2=y2[indexs]
+
     height= 2+4*len(y)/29
     fig, axes = lps.subplots(1, 1, figsize=(6, height), sharex=True, gridspec_kw = {'hspace': 0})
 
-    axes.errorbar(y=labels,x=y,xerr=[ylow,yhigh],fmt="o",color=vset.red,ecolor=vset.blue,markersize=1)
+    xin=np.arange(len(labels))
+    
+    if (do_comp==False):
+        axes.errorbar(y=xin+0.15*len(y)/30,x=y,xerr=[ylow,yhigh],fmt="o",color=vset.blue,ecolor=vset.cyan,markersize=1)
+    else:
+        axes.errorbar(y=xin+0.15*len(y)/30,x=y,xerr=[ylow,yhigh],fmt="o",color=vset.blue,ecolor=vset.cyan,markersize=1,
+                      label=label1)
+        axes.errorbar(y=xin+0.15*len(y2)/30,x=y2,xerr=[ylow2,yhigh2],fmt="o",color=vset.red,ecolor=vset.orange,markersize=1,
+                      label=label2)
+
+
     upper = np.max(y+1.5*yhigh)
+    if (do_comp==True):
+        upper=max(upper,np.max(y2+1.5*yhigh2))
+        upper=upper*5
+    axes.set_yticks(xin, labels)
 
     if (obj=="fit_range"):
         axes.set_xlabel("Oberved counts / yr in {} data".format(data))
@@ -255,9 +277,11 @@ def make_error_bar_plot(indexs,labels:list,y:np.ndarray,ylow:np.ndarray,yhigh:np
     axes.set_yticklabels([val for val in labels], fontsize=8)
     plt.xscale("log")
     plt.grid()
-    fig.legend()
+    fig.legend(loc='upper right')
 
     #plt.show()
+    if (do_comp==True):
+        name_out="comp_{}_to_{}_{}".format(label1,label2,extra)
     if (obj!="scaling_factor"):     
         plt.savefig("plots/fit_results_{}_{}_{}.pdf".format(data,obj,name_out))
     else:
@@ -283,3 +307,18 @@ def get_index_by_type(names):
         i=i+1
 
     return {"U":index_U,"Th":index_Th,"K":index_K}
+
+
+def get_from_df(df,obj):
+    """Get the index, y and errors from dataframe"""
+    x=np.array(df.index)
+    y=np.array(df["{}_marg_mod".format(obj)])
+    y_low = y-np.array(df["{}_qt16".format(obj)])
+    y_high=np.array(df["{}_qt84".format(obj)])-y
+    for i in range(len(y_low)):
+        if (y_low[i]<0):
+            y_low[i]=0
+            y_high[i] +=y[i]
+            y[i]=0
+
+    return x,y,y_low,y_high
