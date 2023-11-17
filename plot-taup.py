@@ -32,7 +32,7 @@ parser.add_argument('-d','--det_type', type=str, help='Detector type',default='a
 parser.add_argument('-l','--lower_x', type=int, help='Low range',default=565)
 parser.add_argument('-u','--upper_x', type=int, help='Upper range',default=3000)
 parser.add_argument("-s","--scale",type=str,help="Scale",default="log")
-parser.add_argument("-o","--out_file",type=str,help="file",default="../results/hmixfit-l200a-taup-silver-dataset-m1-histograms.root")
+parser.add_argument("-o","--out_file",type=str,help="file",default="../hmixfit/results/hmixfit-l200a-taup-silver-dataset-m1-histograms.root")
 parser.add_argument("-c","--components",type=str,help="json components config file path",default="components.json")
 parser.add_argument("-b","--bins",type=int,help="Binning",default=15)
 
@@ -48,7 +48,7 @@ ylowlim =0.05
 scale=args.scale
 outfile=args.out_file
 first_index =utils.find_and_capture(outfile,"hmixfit-")
-name_out = outfile[first_index:-16]
+name_out = outfile[first_index:-17]
 json_file =args.components
 bin = args.bins
 
@@ -58,28 +58,25 @@ with open(json_file, 'r') as file:
     components = json.load(file, object_pairs_hook=OrderedDict)
 
 def get_hist(obj):
-    return obj.to_hist()[132:2982][hist.rebin(bin)]
+    return obj.to_hist()[132:2982+30][hist.rebin(bin)]
 
-if det_type=="all":
+if det_type=="all" or det_type =="sum":
     datasets = ["l200a_taup_silver_dataset_bege", "l200a_taup_silver_dataset_icpc","l200a_taup_silver_dataset_ppc","l200a_taup_silver_dataset_coax"]
     labels = ["BEGe detectors after QC", "ICPC detectors after QC","PPC detectors after QC","COAX detectors after QC"]
 else:
     datasets=["l200a_taup_silver_dataset_{}".format(det_type)]
     labels=["{} detectors after QC".format(det_type)]
 
-
-
 y=6
 if det_type!="all":
     y=4
 
 
-
 ## create the axes
-if (det_type=="all"):
+if (det_type=="all" ):
     fig, axes = lps.subplots(len(datasets), 1, figsize=(6, y), sharex=True, gridspec_kw = {'hspace': 0})
 else:
-    fig, axes_full = lps.subplots(len(datasets)+1, 1, figsize=(6, y), sharex=True, gridspec_kw = { 'height_ratios': [8, 2],"hspace":0})
+    fig, axes_full = lps.subplots(2, 1, figsize=(6, y), sharex=True, gridspec_kw = { 'height_ratios': [8, 2],"hspace":0})
 
 if det_type=="all":
     for ax in axes:
@@ -88,32 +85,66 @@ if det_type=="all":
 else:
     axes=np.array([axes_full[0]])
     
-
+print(datasets)
 ### create the plot
 with uproot.open(outfile) as f:
-    for ds, ax, title in zip(datasets, axes.flatten(), labels):
+
+    ## loop over datasets
+    hs={}
+    #for ds, ax, title in zip(datasets, axes.flatten(), labels):
+    for i in range(len(datasets)):
+        ds = datasets[i]   
+        
+        if (det_type=="all"):
+                ax=axes[i]
+                title=labels[i]
+        else:
+            ax=axes[0]
+            title=labels[0]
+       
+
         for comp, info in components.items():
-            h = None
+         
+            if (det_type!="sum" or ds==datasets[0]):
+               
+                hs[comp]=None
+
+            ## loop over the contributions to h
+
             for name in info["hists"]:
                 if name not in f[ds]["originals"]:
+                    #raise ValueError("PDF {} not in f[{}]".format(name,ds))
                     continue
-                if h is None:
-                    h = get_hist(f[ds]["originals"][name])
+                if hs[comp] is None:
+                    hs[comp] = get_hist(f[ds]["originals"][name])
                 else:
-                    h += get_hist(f[ds]["originals"][name])
-            for i in range(h.size - 2):
-                if h[i] == 0:
-                    h[i] = 1.05*ylowlim
+                    hs[comp] += get_hist(f[ds]["originals"][name])
 
-            h.plot(ax=ax, **style, **info["style"])
+       
+            if (det_type=="sum" and ds!=datasets[-1]):
+                continue
+            
+            for i in range(hs[comp].size - 2):
+                if hs[comp][i] == 0:
+                    hs[comp][i] = 1.05*ylowlim
+            
+            hs[comp].plot(ax=ax, **style, **info["style"])
+
+            ### make the residual plot
             if (comp=="data"):
-                data=h.values()
-                bins=h.axes.centers[0]
+                data=hs[comp].values()
+                bins=hs[comp].axes.centers[0]
             if (comp=="total_model"):
-                pred=h.values()
+                pred=hs[comp].values()
+
+        print(ds)
+        if (det_type=="sum" and ds!=datasets[-1]):
+                continue
+        
+        print(ds)
         residual = np.array([((d - m) / (m ** 0.5)) if d > -1 else 0 for d, m in zip(data, pred)])
 
-        if ds == datasets[0]:
+        if ds == datasets[0] or det_type=="sum":
             ax.legend(loc="upper right", ncols=3)
             ax.set_legend_annotation()
         elif ds==datasets[len(datasets)-1]:
@@ -122,7 +153,9 @@ with uproot.open(outfile) as f:
         else:
             ax.xaxis.set_tick_params(top=False)
 
-        ax.annotate(title, (0.02, 0.88), xycoords="axes fraction", fontsize=8)
+        if (det_type!="all"):
+            ax.set_legend_logo(position='upper left', logo_type = 'preliminary', scaling_factor=7)
+
 
         
         masked_values = np.ma.masked_where((bins > xhigh)  | (bins < xlow), pred)
