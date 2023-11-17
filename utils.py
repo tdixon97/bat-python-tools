@@ -5,6 +5,8 @@ from legend_plot_style import LEGENDPlotStyle as lps
 lps.use('legend')
 import matplotlib.pyplot as plt
 import numpy as np
+import tol_colors as tc
+
 
 def find_and_capture(text:str, pattern:str):
     """Function to  find the start index of a pattern in a string
@@ -217,3 +219,67 @@ def plot_corr(df,i,j,labels,save):
     cor=plot_two_dim(x,y,rangex,rangey,"{} [1/yr]".format(labels[i]),
                                                     "{} [1/yr]".format(labels[j]),
                                                     "{} vs {}".format(labels[i],labels[j]),bins,True,save)
+    
+
+
+def make_error_bar_plot(indexs,labels:list,y:np.ndarray,ylow:np.ndarray,yhigh:np.ndarray,data,name_out,obj):
+    """
+    Make the error bar plot
+    """
+    indexs=np.array(indexs,dtype="int")
+    vset = tc.tol_cset('vibrant')
+    labels=np.array(labels)
+    y=y[indexs]
+    labels=labels[indexs]
+    ylow=ylow[indexs]
+    yhigh=yhigh[indexs]
+    height= 2+4*len(y)/29
+    fig, axes = lps.subplots(1, 1, figsize=(6, height), sharex=True, gridspec_kw = {'hspace': 0})
+
+    axes.errorbar(y=labels,x=y,xerr=[ylow,yhigh],fmt="o",color=vset.red,ecolor=vset.blue,markersize=1)
+    upper = np.max(y+1.5*yhigh)
+
+    if (obj=="fit_range"):
+        axes.set_xlabel("Oberved counts / yr in {} data".format(data))
+        axes.set_xlim(0.1,upper)
+
+    elif (obj=="bi_range"):
+        axes.set_xlabel("Observed bkg counts / yr in {} data".format(data))
+        axes.set_xlim(0.1,upper)
+    elif (obj=="scaling_factor"):
+        axes.set_xlabel("Scaling factor [1/yr] ")
+        axes.set_xlim(1E-7,upper)
+ 
+    axes.set_yticks(axes.get_yticks())
+    
+    axes.set_yticklabels([val for val in labels], fontsize=8)
+    plt.xscale("log")
+    plt.grid()
+    fig.legend()
+
+    #plt.show()
+    if (obj!="scaling_factor"):     
+        plt.savefig("plots/fit_results_{}_{}_{}.pdf".format(data,obj,name_out))
+    else:
+        plt.savefig("plots/fit_results_{}_{}.pdf".format(obj,name_out))
+
+
+def get_index_by_type(names):
+    """ Get the index for each type (U,Th,K)"""
+    i=0
+    index_U = []
+    index_Th =[]
+    index_K=[]
+    
+    for key in names:
+       
+        if (key.find("Bi212")!=-1):
+            index_Th.append(i)
+        elif(key.find("Bi214")!=-1):
+            index_U.append(i)
+        elif(key.find("K")!=-1):
+        
+            index_K.append(i)    
+        i=i+1
+
+    return {"U":index_U,"Th":index_Th,"K":index_K}
