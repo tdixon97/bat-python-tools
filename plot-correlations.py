@@ -72,13 +72,13 @@ for key in df.keys():
     names["Index"].append(i)
     names["Name"].append(labels[i])
     if (key.find("Bi212")!=-1):
-        names_U['Name'].append(labels[i])
-        names_U["Index"].append(len(index_U))
-        index_U.append(i)
-    elif(key.find("Bi214")!=-1):
         names_Th['Name'].append(labels[i])
-        names_Th["Index"].append(len(index_Th))
+        names_Th["Index"].append(len(index_U))
         index_Th.append(i)
+    elif(key.find("Bi214")!=-1):
+        names_U['Name'].append(labels[i])
+        names_U["Index"].append(len(index_Th))
+        index_U.append(i)
     elif(key.find("K")!=-1):
         names_K['Name'].append(labels[i])
         names_K["Index"].append(len(index_K))
