@@ -1,0 +1,100 @@
+{
+  "2vbb": {
+    "hists": [
+      "Nvbb_bege",
+      "Nvbb_icpc",
+      "Nvbb_coax",
+      "Nvbb_ppc"
+    ],
+    "style": {
+      "color": "#999933",
+      "label": "$2\\nu\\beta\\beta$"
+    }
+  },
+  "Th": {
+    "hists": [
+      "Ac228_pen_plates",
+      "Bi212Tl208_birds_nest",
+      "Bi212Tl208_cables",
+      "Bi212Tl208_fiber_shroud",
+      "Bi212Tl208_front_end_electronics",
+      "Bi212Tl208_hpge_support_copper",
+      "Bi212Tl208_mini_shroud",
+      "Bi212Tl208_pen_plates",
+      "Bi212Tl208_wls_reflector"
+    ],
+    "style": {
+      "color": "#33BBEE",
+      "label": "Thorium"
+    }
+  },
+  "U": {
+    "hists": [
+      "Pb214Bi214_birds_nest",
+      "Pb214Bi214_cables",
+      "Pb214Bi214_fiber_shroud",
+      "Pb214Bi214_front_end_electronics",
+      "Pb214Bi214_hpge_support_copper",
+      "Pb214Bi214_mini_shroud",
+      "Pb214Bi214_pen_plates",
+      "Pb214Bi214_wls_reflector"
+    ],
+    "style": {
+      "color": "#009988",
+      "label": "Uranium"
+    }
+  },
+  "K40": {
+    "hists": [
+      "K40_front_end_electronics",
+      "K40_hpge_support_copper",
+      "K40_pen_plates",
+      "K40_wls_reflector"
+    ],
+    "style": {
+      "color": "#CC3311",
+      "label": "$^{40}$K"
+    }
+  },
+  "K42": {
+    "hists": [
+      "K42_homogeneous",
+      "K42_hpge_shell",
+      "K42_hpge_surface",
+      "K42_mini_shroud"
+    ],
+    "style": {
+      "color": "#EE3377",
+      "label": "$^{42}$K"
+    }
+  },
+  "Ar39": {
+    "hists": [
+      "Ar39_homogeneous"
+    ],
+    "style": {
+      "color": "#5b2c6f",
+      "label": "$^{39}$Ar"
+    }
+  },
+  "total_model": {
+    "hists": [
+      "total_model"
+    ],
+    "style": {
+      "label": "Model",
+      "color": "#000000"
+    }
+  },
+  "data": {
+    "hists": [
+      "fitted_data"
+    ],
+    "style": {
+      "label": "Data",
+      "histtype": "fill",
+      "color": "#0077BB",
+      "alpha": 0.25
+    }
+  }
+}
