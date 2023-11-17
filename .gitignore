@@ -9,3 +9,4 @@
 *#
 plots/*
 __pycache__/*
+.#components.json
