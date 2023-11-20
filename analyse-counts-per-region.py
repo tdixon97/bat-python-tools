@@ -137,7 +137,7 @@ for key in effs.keys():
 
     data = sums_full[key]*time
     data_real = np.random.poisson(data)
-    axes_full.hist(sums_full[key],range=(min(data),max(data)),bins=100,alpha=0.3,color=vset.blue,label="Estimated parameter")
+    axes_full.hist(data,range=(min(data),max(data)),bins=100,alpha=0.3,color=vset.blue,label="Estimated parameter")
     axes_full.hist(data_real,range=(min(data),max(data)),bins=100,alpha=0.3,color=vset.red,label="Expected realisations")
 
     axes_full.set_xlabel("counts")
