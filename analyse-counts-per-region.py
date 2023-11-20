@@ -135,12 +135,12 @@ fig, axes_full = lps.subplots(1, 1,figsize=(6, 4), sharex=True, gridspec_kw = { 
 for key in effs.keys():
     fig, axes_full = lps.subplots(1, 1,figsize=(6, 4), sharex=True, gridspec_kw = { "hspace":0})
 
-    data = sums_full[key]
+    data = sums_full[key]*time
     data_real = np.random.poisson(data)
     axes_full.hist(sums_full[key],range=(min(data),max(data)),bins=100,alpha=0.3,color=vset.blue,label="Estimated parameter")
     axes_full.hist(data_real,range=(min(data),max(data)),bins=100,alpha=0.3,color=vset.red,label="Expected realisations")
 
-    axes_full.set_xlabel("counts/yr")
+    axes_full.set_xlabel("counts")
     axes_full.set_ylabel("Prob [arb]")
     axes_full.plot(np.array([data_counts[key],data_counts[key]]),np.array([axes_full.get_ylim()[0],axes_full.get_ylim()[1]]),label="Data",color="black")
     axes_full.set_title("Model reconstruction for {}".format(key))
