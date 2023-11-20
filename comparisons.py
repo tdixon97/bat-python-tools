@@ -52,9 +52,9 @@ scale=args.scale
 in_file_1=args.in_file_1
 in_file_2=args.in_file_2
 first_index_1 =utils.find_and_capture(in_file_1,"hmixfit-")
-name_out_1 = in_file_1[first_index_1:-16]
+name_out_1 = in_file_1[first_index_1:-17]
 first_index_2 =utils.find_and_capture(in_file_2,"hmixfit-")
-name_out_2 = in_file_2[first_index_2:-16]
+name_out_2 = in_file_2[first_index_2:-17]
 json_file =args.components
 bin = args.bins
 compare_data =args.compare_data
@@ -202,7 +202,7 @@ with uproot.open(in_file_1) as f1:
                 axes_full[1].set_ylabel("Ratio")
                 axes_full[1].set_yscale("linear")
                 axes_full[1].set_xlim(xlow,xhigh)
-                axes_full[1].set_ylim(0,1.1)
+                axes_full[1].set_ylim(min(residual),max(residual))
                 axes_full[1].xaxis.set_tick_params(top=False)
 
                 plt.tight_layout()

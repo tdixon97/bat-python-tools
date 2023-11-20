@@ -35,6 +35,7 @@ parser.add_argument("-s","--scale",type=str,help="Scale",default="log")
 parser.add_argument("-o","--out_file",type=str,help="file",default="../hmixfit/results/hmixfit-l200a-taup-silver-dataset-m1-histograms.root")
 parser.add_argument("-c","--components",type=str,help="json components config file path",default="components.json")
 parser.add_argument("-b","--bins",type=int,help="Binning",default=15)
+parser.add_argument("-r","--regions",type=int,help="Shade regions",default=0)
 
 
 ### read the arguments
@@ -49,9 +50,19 @@ scale=args.scale
 outfile=args.out_file
 first_index =utils.find_and_capture(outfile,"hmixfit-")
 name_out = outfile[first_index:-17]
+
 json_file =args.components
 bin = args.bins
 
+comp_name = json_file[:-5]
+shade_regions=args.regions
+
+regions={"$2\\nu\\beta\\beta$":(800,1300),
+         "K peaks":(1400,1600),
+         "Tl compton":(1900,2500),
+         "Tl peak":(2600,2630)
+         }
+colors=[vset.red,vset.orange,vset.magenta,vset.teal]
 
 
 with open(json_file, 'r') as file:
@@ -137,25 +148,11 @@ with uproot.open(outfile) as f:
             if (comp=="total_model"):
                 pred=hs[comp].values()
 
-        print(ds)
         if (det_type=="sum" and ds!=datasets[-1]):
                 continue
         
-        print(ds)
+        
         residual = np.array([((d - m) / (m ** 0.5)) if d > -1 else 0 for d, m in zip(data, pred)])
-
-        if ds == datasets[0] or det_type=="sum":
-            ax.legend(loc="upper right", ncols=3)
-            ax.set_legend_annotation()
-        elif ds==datasets[len(datasets)-1]:
-            ax.xaxis.set_tick_params(top=False)
-            ax.set_legend_logo(position='upper right', logo_type = 'preliminary', scaling_factor=7)
-        else:
-            ax.xaxis.set_tick_params(top=False)
-
-        if (det_type!="all"):
-            ax.set_legend_logo(position='upper left', logo_type = 'preliminary', scaling_factor=7)
-
 
         
         masked_values = np.ma.masked_where((bins > xhigh)  | (bins < xlow), pred)
@@ -167,13 +164,41 @@ with uproot.open(outfile) as f:
             max_y=3*max_y
             
         ax.set_yscale("linear")
-        ax.set_ylim(bottom=ylowlim,top=max_y)      
+        ax.set_ylim(bottom=ylowlim,top=max_y)
+        idx=0
+        if (shade_regions==True):
+            for region in regions.keys():
+                range = regions[region]
+                ax.fill_between(np.array([range[0],range[1]]),np.array([max_y,max_y]),
+                                label=region,alpha=0.3,color=colors[idx])
+                idx+=1
+
+
+        if ds == datasets[0] or det_type=="sum":
+            legend=ax.legend(loc="upper right", ncols=3,frameon=True,facecolor="white")
+            ax.set_legend_annotation()
+            frame = legend.get_frame()
+            frame.set_edgecolor('black') 
+            frame.set_zorder(3)
+        elif ds==datasets[len(datasets)-1]:
+            ax.xaxis.set_tick_params(top=False)
+            ax.set_legend_logo(position='upper right', logo_type = 'preliminary', scaling_factor=7)
+        else:
+            ax.xaxis.set_tick_params(top=False)
+
+        if (det_type!="all"):
+            ax.set_legend_logo(position='upper left', logo_type = 'preliminary', scaling_factor=7)
+
+
+
+
         if (det_type=="all"):
             ax.set_xlabel("Energy (keV)")
         ax.set_ylabel("Counts / 15 keV")
         ax.set_yscale(scale)
         ax.set_xlim(xlow,xhigh)
         
+
         ### now plot the residual
         if (det_type!="all"):
             
@@ -188,10 +213,10 @@ with uproot.open(outfile) as f:
 
             plt.tight_layout()
 
-
+plt.legend()
 plt.tight_layout()
-
-plt.savefig("plots/{}_{}_{}_{}_to_{}.pdf".format(name_out,det_type,scale,xlow,xhigh))
+#plt.show()
+plt.savefig("plots/fit_plots/{}_{}_{}_{}_to_{}_{}_{}.pdf".format(name_out,det_type,scale,xlow,xhigh,bin,comp_name))
 
 
 

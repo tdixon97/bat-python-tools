@@ -1,0 +1,74 @@
+File = l200a-hpge-bulk-2vbb-tier_pdf.root
+par = 2vbb_icpc 
+{
+  "full": {
+    "2vbb_icpc": 0.29774506
+  },
+  "$2\\nu\\beta\\beta$": {
+    "2vbb_icpc": 0.15978994
+  },
+  "K peaks": {
+    "2vbb_icpc": 0.00953266
+  },
+  "Tl compton": {
+    "2vbb_icpc": 3.16e-06
+  },
+  "Tl peak": {
+    "2vbb_icpc": 0.0
+  }
+}
+File = l200a-hv-signal-cables-Ra224-to-Pb208-tier_pdf.root
+par = Bi212Tl208_cables 
+{
+  "full": {
+    "2vbb_icpc": 0.29774506,
+    "Bi212Tl208_cables": 0.01121037
+  },
+  "$2\\nu\\beta\\beta$": {
+    "2vbb_icpc": 0.15978994,
+    "Bi212Tl208_cables": 0.00192219
+  },
+  "K peaks": {
+    "2vbb_icpc": 0.00953266,
+    "Bi212Tl208_cables": 0.00053204
+  },
+  "Tl compton": {
+    "2vbb_icpc": 3.16e-06,
+    "Bi212Tl208_cables": 0.00229672
+  },
+  "Tl peak": {
+    "2vbb_icpc": 0.0,
+    "Bi212Tl208_cables": 0.00120883
+  }
+}
+File = l200a-hpge-support-copper-Ra224-to-Pb208-tier_pdf.root
+par = Bi212Tl208_hpge_support_copper 
+{
+  "full": {
+    "2vbb_icpc": 0.29774506,
+    "Bi212Tl208_cables": 0.01121037,
+    "Bi212Tl208_hpge_support_copper": 0.02973184
+  },
+  "$2\\nu\\beta\\beta$": {
+    "2vbb_icpc": 0.15978994,
+    "Bi212Tl208_cables": 0.00192219,
+    "Bi212Tl208_hpge_support_copper": 0.00484174
+  },
+  "K peaks": {
+    "2vbb_icpc": 0.00953266,
+    "Bi212Tl208_cables": 0.00053204,
+    "Bi212Tl208_hpge_support_copper": 0.00120653
+  },
+  "Tl compton": {
+    "2vbb_icpc": 3.16e-06,
+    "Bi212Tl208_cables": 0.00229672,
+    "Bi212Tl208_hpge_support_copper": 0.00542098
+  },
+  "Tl peak": {
+    "2vbb_icpc": 0.0,
+    "Bi212Tl208_cables": 0.00120883,
+    "Bi212Tl208_hpge_support_copper": 0.00295327
+  }
+}
+File = l200a-fibers-Ra224-to-Pb208-tier_pdf.root
+par = Bi212Tl208_fiber_shroud 

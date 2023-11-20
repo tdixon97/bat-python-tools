@@ -24,8 +24,8 @@ parser.add_argument("-i","--in_file",type=str,help="file",default="../hmixfit/re
 parser.add_argument("-2","--in_file_2",type=str,help="file",default=None)
 
 parser.add_argument("-c","--components",type=str,help="json components config file path",default="components.json")
-parser.add_argument("-o","--obj",type=str,help="obj to plot 'fit_range' 'bi_range' or 'scaling_factor'",default="fit_range")
-
+parser.add_argument("-o","--obj",type=str,help="obj to plot 'fit_range' 'bi_range' or 'scaling_factor', 'parameter",default="fit_range")
+parser.add_argument("-s","--scale",type=float,help="factor to scale the second set of activiies by",default=1)
 
 
 
@@ -35,20 +35,22 @@ datas=["bege","icpc","coax","ppc"]
 args = parser.parse_args()
 infile=args.in_file
 infile2=args.in_file_2
+scale= args.scale
 do_comp=False
 if (infile2!=None):
     do_comp=True
 json_file =args.components
 obj = args.obj
-first_index =utils.find_and_capture(infile,"hmixfit-l200a_taup_silver_dataset_")
+first_index =utils.find_and_capture(infile,"hmixfit-l200a_taup_silver_dataset")
 
-name_out = infile[first_index:-14]
+name_out = "fit"+infile[first_index:-14]
 label1=name_out
 label2=""
 if (do_comp):
-    first_index =utils.find_and_capture(infile2,"hmixfit-l200a_taup_silver_dataset_")
-    label2=infile2[first_index:-14]
-
+    first_index =utils.find_and_capture(infile2,"hmixfit-l200a_taup_silver_dataset")
+    label2="fit"+infile2[first_index:-14]
+    print(infile2[first_index:])
+print(label1,label2)
 
 with open(json_file, 'r') as file:
     components = json.load(file, object_pairs_hook=OrderedDict)
@@ -70,32 +72,55 @@ for data in datas:
         df2 =utils.ttree2df(infile2,tree)
         df2 = df2[df2['fit_range_orig'] != 0]
         dfs2[data]=df2
-
-if obj=="scaling_factor":
+names=datas
+if obj=="scaling_factor" or obj=="parameter":
     datas=["bege"]
+    names=["all"]
 
-for data in datas:
+for data,name in zip(datas,names):
     
 
     #axes.set_title("Spectrum breakdown for {}".format(data))
-    x,y,y_low,y_high=utils.get_from_df(df,obj)
-    if (do_comp):
-        x2,y2,y_low2,y_high2=utils.get_from_df(df2,obj)
+
+    if (obj=="parameter"):
+        x,y,y_low,y_high=utils.get_from_df(df,"fit_range")
+        norm = np.array(df["fit_range_orig"])
+        x=x/norm
+        y=y/norm
+        y_low=y_low/norm
+        y_high=y_high/norm
+        if (do_comp):
+            x2,y2,y_low2,y_high2=utils.get_from_df(df2,"fit_range")
+            norm2 = np.array(df2["fit_range_orig"])
+            x2=x2/norm2
+            y2=y2/norm2
+            y_low2=y_low2/norm2
+            y_high2=y_high2/norm2
+            y2*=scale
+            y_low2*=scale
+            y_high2*=scale
+    else:
+        x,y,y_low,y_high=utils.get_from_df(df,obj)
+        if (do_comp):
+            x2,y2,y_low2,y_high2=utils.get_from_df(df2,obj)
+            y2*=scale
+            y_low2*=scale
+            y_high2*=scale
 
     ns=0
     labels=utils.format_latex(np.array(dfs[data]["comp_name"]))
 
     if (do_comp==0):
-        utils.make_error_bar_plot(np.arange(len(labels)),labels,y,y_low,y_high,data,name_out,obj)
-        utils.make_error_bar_plot(indexs[data]["U"],labels,y,y_low,y_high,data,name_out+"_U",obj)
-        utils.make_error_bar_plot(indexs[data]["Th"],labels,y,y_low,y_high,data,name_out+"_Th",obj)
-        utils.make_error_bar_plot(indexs[data]["K"],labels,y,y_low,y_high,data,name_out+"_K",obj)
+        utils.make_error_bar_plot(np.arange(len(labels)),labels,y,y_low,y_high,name,name_out,obj)
+        utils.make_error_bar_plot(indexs[data]["U"],labels,y,y_low,y_high,name,name_out+"_U",obj)
+        utils.make_error_bar_plot(indexs[data]["Th"],labels,y,y_low,y_high,name,name_out+"_Th",obj)
+        utils.make_error_bar_plot(indexs[data]["K"],labels,y,y_low,y_high,name,name_out+"_K",obj)
 
     else:
-        utils.make_error_bar_plot(np.arange(len(labels)),labels,y,y_low,y_high,data,name_out,obj,y2,y_low2,y_high2,label1,label2,"",1)
-        utils.make_error_bar_plot(indexs[data]["U"],labels,y,y_low,y_high,data,name_out,obj,y2,y_low2,y_high2,label1,label2,"U",1)
-        utils.make_error_bar_plot(indexs[data]["Th"],labels,y,y_low,y_high,data,name_out,obj,y2,y_low2,y_high2,label1,label2,"Th",1)
-        utils.make_error_bar_plot(indexs[data]["K"],labels,y,y_low,y_high,data,name_out,obj,y2,y_low2,y_high2,label1,label2,"K",1)
+        utils.make_error_bar_plot(np.arange(len(labels)),labels,y,y_low,y_high,name,name_out,obj,y2,y_low2,y_high2,label1,label2,"",1)
+        utils.make_error_bar_plot(indexs[data]["U"],labels,y,y_low,y_high,name,name_out,obj,y2,y_low2,y_high2,label1,label2,"U",1)
+        utils.make_error_bar_plot(indexs[data]["Th"],labels,y,y_low,y_high,name,name_out,obj,y2,y_low2,y_high2,label1,label2,"Th",1)
+        utils.make_error_bar_plot(indexs[data]["K"],labels,y,y_low,y_high,name,name_out,obj,y2,y_low2,y_high2,label1,label2,"K",1)
           
                                   
 
