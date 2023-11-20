@@ -126,7 +126,7 @@ time=0.1273
 hist=hist.to_hist()
 for region,range in regions.items():
     data= float(utils.integrate_hist(hist,range[0],range[1]))
-    data=data/time
+    
 
     data_counts[region]=data
 
