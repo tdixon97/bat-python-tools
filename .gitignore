@@ -10,3 +10,5 @@
 plots/*
 __pycache__/*
 .#components.json
+*.text
+*.txt
