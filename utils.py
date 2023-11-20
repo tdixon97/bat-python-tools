@@ -251,7 +251,7 @@ def make_error_bar_plot(indexs,labels:list,y:np.ndarray,ylow:np.ndarray,yhigh:np
     else:
         axes.errorbar(y=xin+0.15*len(y)/30,x=y,xerr=[ylow,yhigh],fmt="o",color=vset.blue,ecolor=vset.cyan,markersize=1,
                       label=label1)
-        axes.errorbar(y=xin+0.15*len(y2)/30,x=y2,xerr=[ylow2,yhigh2],fmt="o",color=vset.red,ecolor=vset.orange,markersize=1,
+        axes.errorbar(y=xin-0.15*len(y2)/30,x=y2,xerr=[ylow2,yhigh2],fmt="o",color=vset.red,ecolor=vset.orange,markersize=1,
                       label=label2)
 
 
@@ -271,21 +271,25 @@ def make_error_bar_plot(indexs,labels:list,y:np.ndarray,ylow:np.ndarray,yhigh:np
     elif (obj=="scaling_factor"):
         axes.set_xlabel("Scaling factor [1/yr] ")
         axes.set_xlim(1E-7,upper)
+    elif obj=="parameter":
+        axes.set_xlabel("Decays / yr [1/yr]")
+        axes.set_xlim(0.1,upper)
  
     axes.set_yticks(axes.get_yticks())
     
     axes.set_yticklabels([val for val in labels], fontsize=8)
     plt.xscale("log")
     plt.grid()
-    fig.legend(loc='upper right')
+    leg=fig.legend(loc='upper right',bbox_to_anchor=(1.0, .9),frameon=True, facecolor='white')
+    leg.set_zorder(10)    
 
     #plt.show()
     if (do_comp==True):
         name_out="comp_{}_to_{}_{}".format(label1,label2,extra)
     if (obj!="scaling_factor"):     
-        plt.savefig("plots/fit_results_{}_{}_{}.pdf".format(data,obj,name_out))
+        plt.savefig("plots/fit_results/fit_results_{}_{}_{}.pdf".format(data,obj,name_out))
     else:
-        plt.savefig("plots/fit_results_{}_{}.pdf".format(obj,name_out))
+        plt.savefig("plots/fit_results/fit_results_{}_{}.pdf".format(obj,name_out))
 
 
 def get_index_by_type(names):
@@ -322,3 +326,17 @@ def get_from_df(df,obj):
             y[i]=0
 
     return x,y,y_low,y_high
+
+
+def integrate_hist(hist,low,high):
+    """ Integrate the histogram"""
+
+    bin_centers= hist.axes.centers[0]
+
+    values = hist.values()
+    lower_index = np.searchsorted(bin_centers, low, side="right")
+    upper_index = np.searchsorted(bin_centers, high, side="left")
+    bin_contents_range =values[lower_index:upper_index]
+    bin_centers_range=bin_centers[lower_index:upper_index]
+    
+    return np.sum(bin_contents_range)
