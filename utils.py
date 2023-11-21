@@ -1,12 +1,17 @@
 import re
 import pandas as pd
 import uproot
+import copy
 from legend_plot_style import LEGENDPlotStyle as lps
+from datetime import datetime, timezone
+
 lps.use('legend')
 import matplotlib.pyplot as plt
 import numpy as np
 import tol_colors as tc
-
+import json
+from legendmeta import LegendMetadata
+import warnings
 
 def find_and_capture(text:str, pattern:str):
     """Function to  find the start index of a pattern in a string
@@ -342,7 +347,7 @@ def integrate_hist(hist,low,high):
     return np.sum(bin_contents_range)
 
 
-def get_efficiencies(cfg,spectrum,det_type,regions,pdf_path):
+def get_efficiencies(cfg,spectrum,det_type,regions,pdf_path,name):
     """ Get the efficiencies"""
 
     effs={"full":{},"2nu":{},"K peaks":{},"Tl compton":{},"Tl peak":{}}
@@ -354,29 +359,39 @@ def get_efficiencies(cfg,spectrum,det_type,regions,pdf_path):
         effs[key]["2vbb_ppc"]=0
         effs[key]["2vbb_icpc"]=0
 
-    icpc_comp_list=cfg["fit"]["theoretical-expectations"]["l200a-taup-silver-dataset.root"]["{}/{}".format(spectrum,
-                                                                                                           det_type)]["components"]
-
-    for comp in icpc_comp_list:
+    if "{}/{}".format(spectrum,"icpc") in cfg["fit"]["theoretical-expectations"]["l200a-taup-silver-dataset.root"]:
+    
+        icpc_comp_list=cfg["fit"]["theoretical-expectations"]["l200a-taup-silver-dataset.root"]["{}/{}".format(spectrum,name)]["components"]
+    else:
+        warnings.warn("{}/{} not in MC PDFs".format(spectrum,det_type))
+        return effs,0
+    comp_list = copy.deepcopy(icpc_comp_list)
+    
+    for comp in comp_list:
         for key in comp["components"].keys():
             par = key
         ## now open the file
 
         file = uproot.open(pdf_path+comp["root-file"])
-    
-        hist = file["{}/{}".format(spectrum,det_type)]
-        N  = int(file["number_of_primaries"])
+        
+        if "{}/{}".format(spectrum,det_type) in file:
+            hist = file["{}/{}".format(spectrum,det_type)]
+            N  = int(file["number_of_primaries"])
+            hist = hist.to_hist()
 
+            for key,region in regions.items():
 
-        hist = hist.to_hist()
+                eff= float(integrate_hist(hist,region[0],region[1]))
+                effs[key][par]=eff/N
+        else:
 
-        for key,region in regions.items():
+            warnings.warn("{}/{} not in MC PDFs".format(spectrum,det_type))
+            for key,region in regions.items():
+                effs[key][par]=0
 
-            eff= float(integrate_hist(hist,region[0],region[1]))
+        
 
-            effs[key][par]=eff/N
-
-    return effs
+    return effs,1
    
 
 def sum_effs(eff1,eff2):
@@ -404,9 +419,16 @@ def sum_effs(eff1,eff2):
 def get_data_counts(spectrum,det_type,regions,file):
     """Get the counts in the data in a range"""
 
-    hist =file["{}/{}".format(spectrum,det_type)]
+    if "{}/{}".format(spectrum,det_type) in file:
+        hist =file["{}/{}".format(spectrum,det_type)]
+    else:
+        data_counts={}
+        warnings.warn("{}/{} not in data".format(spectrum,det_type))
+        for region in regions.keys():
+            data_counts[region]=0
+        return data_counts
+    
     data_counts={}
-
     hist=hist.to_hist()
     for region,range in regions.items():
         data= float(integrate_hist(hist,range[0],range[1]))
@@ -414,3 +436,40 @@ def get_data_counts(spectrum,det_type,regions,file):
         data_counts[region]=data
 
     return data_counts
+
+
+def get_channels_map():
+    """ Get the channels map"""
+
+    meta = LegendMetadata()
+ 
+    ### 1st July should be part of TAUP dataset
+    time = datetime(2023, 7, 1, 00, 00, 00, tzinfo=timezone.utc)
+    chmap = meta.channelmap(datetime.now())
+
+
+
+    string_channels={}
+    string_types={}
+    for string in range(1,12):
+        if (string==6):
+            continue
+        channels_names = [
+            f"ch{chmap[detector].daq.rawid:07}"
+            for detector, dic in meta.dataprod.config.on(time)["analysis"].items()
+            if dic["processable"] == True
+            and chmap[detector]["system"] == 'geds'
+            and chmap[detector]["location"]["string"] == string
+        ]
+        channels_types = [
+            chmap[detector]['type']
+            for detector, dic in meta.dataprod.config.on(time, system="cal")["analysis"].items()
+            if dic["processable"] == True
+            and chmap[detector]["system"] == 'geds'
+            and chmap[detector]["location"]["string"] == string
+        ]
+       
+        string_channels[string]=channels_names
+        string_types[string]=channels_types
+
+    return string_channels,string_types

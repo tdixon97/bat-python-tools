@@ -13,7 +13,7 @@ import re
 import utils
 import json
 import time
-
+import warnings
 
 vset = tc.tol_cset('vibrant')
 mset = tc.tol_cset('muted')
@@ -51,15 +51,32 @@ fit_name = outfile[first_index:-10]
 ### get a list of detector types to consider
 
 if (det_type!="sum" and det_type!="str" and det_type!="chan"):
-    det_types={"icpc":["icpc"],
-            "ppc":["ppc"],
-            "bege":["bege"],
-            "coax":["coax"]
+    det_types={"icpc": {"names":["icpc"],"types":["icpc"]},
+               "bege": {"names":["bege"],"types":["bege"]},
+               "ppc": {"names":["ppc"],"types":["ppc"]},
+               "coax": {"names":["coax"],"types":["coax"]}
             }
     name="by_type"
 elif (det_type=="sum"):
-    det_types={"all":["icpc","bege","ppc","coax"]}
+    det_types={"all":{"names":["icpc","bege","ppc","coax"],"types":["icpc","bege","ppc","coax"]}}
     name="all"
+elif(det_type=="str"):
+    string_channels,string_types = utils.get_channels_map()
+    det_types={}
+    for string in string_channels.keys():
+        det_types[string]={"names":string_channels[string],"types":string_types[string]}
+    name="string"
+elif (det_type=="chan"):
+    string_channels,string_types = utils.get_channels_map()
+    det_types={}
+    for string in string_channels.keys():
+        chans = string_channels[string]
+        types=string_types[string]
+
+        for chan,type in zip(chans,types):
+            det_types[chan]={"names":[chan],"types":[type]}
+
+print(json.dumps(det_types,indent=1))
 
 with open(cfg_file,"r") as file:
     cfg =json.load(file)
@@ -72,12 +89,16 @@ regions={"full": (565,2995),
          }
 eff_total={}
 ### creat the efficiency maps (per dataset)
-for det_name, det_list in det_types.items():
+for det_name, det_info in det_types.items():
+    
+    det_list=det_info["names"]
 
     effs={"full":{},"2nu":{},"K peaks":{},"Tl compton":{},"Tl peak":{}}
 
-    for det in det_list:
-        effs=utils.sum_effs(effs,utils.get_efficiencies(cfg,spectrum,det,regions,pdf_path))
+    for det,named in zip(det_list,det_info["types"]):
+        eff_new,good = utils.get_efficiencies(cfg,spectrum,det,regions,pdf_path,named)
+        if (good==1):
+            effs=utils.sum_effs(effs,eff_new)
 
     eff_total[det_name]=effs
 
@@ -119,8 +140,9 @@ time=0.1273
 data_counts_total={}
 
 ## loop over datasets
-for det_name,det_list in det_types.items():
+for det_name,det_info in det_types.items():
 
+    det_list=det_info["names"]
     data_counts={"full":0,"2nu":0,"Tl compton":0,"Tl peak":0,"K peaks":0}
     for det in det_list:
         data_counts = utils.sum_effs(data_counts,utils.get_data_counts(spectrum,det,regions,file))
@@ -137,7 +159,7 @@ for det_name in det_types:
     effs = eff_total[det_name]
     data_counts =data_counts_total[det_name]
     sums_full = sums_total[det_name]
-
+    print(det_name)
     for key in effs.keys():
         fig, axes_full = lps.subplots(1, 1,figsize=(6, 4), sharex=True, gridspec_kw = { "hspace":0})
 
@@ -151,7 +173,7 @@ for det_name in det_types:
         summary[key][det_name]=[low,med,high]
 
         rangef = (int(min(np.min(data_real),data_counts[key]))-0.5,int(max(np.max(data_real),data_counts[key]))+0.5)
-
+      
         bins = int(rangef[1]-rangef[0])
         axes_full.hist(data,range=rangef,bins=bins,alpha=0.3,color=vset.blue,label="Estimated parameter")
         axes_full.hist(data_real,range=rangef,bins=bins,alpha=0.3,color=vset.red,label="Expected realisations")
@@ -161,7 +183,7 @@ for det_name in det_types:
         axes_full.plot(np.array([data_counts[key],data_counts[key]]),np.array([axes_full.get_ylim()[0],axes_full.get_ylim()[1]]),label="Data",color="black")
         axes_full.set_title("Model reconstruction for {} {:.2g}$^{{+{:.2g}}}_{{-{:.2g}}}$".format(key,med,high,low))
         plt.legend()
-        plt.savefig("plots/region_counts/{}_{}_{}.pdf".format(det_name,key,fit_name))
+        plt.savefig("plots/region_counts/count_{}_{}_{}.pdf".format(det_name,key,fit_name))
 
         plt.close()
 
@@ -225,11 +247,11 @@ for region in summary.keys():
 
     axes_full[1].errorbar(0.5+np.arange(len(names)),residual,yerr=np.ones(len(residual)),fmt="o",color=vset.blue,markersize=2)
     axes_full[1].axhline(y=0, color='black', linestyle='--', linewidth=1)
-    axes_full[1].set_xlabel("Energy (keV)")
+    axes_full[1].set_xlabel("Dataset")
     axes_full[1].set_ylabel("Residual")
     axes_full[1].set_yscale("linear")
     axes_full[1].set_xlim(0,max(xs))
-    axes_full[1].set_ylim(-5,5)
+    axes_full[1].set_ylim(min(residual)-2,max(residual+2))
     axes_full[1].xaxis.set_tick_params(top=False)
 
     plt.tight_layout()
