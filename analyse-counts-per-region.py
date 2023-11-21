@@ -69,6 +69,7 @@ elif(det_type=="str"):
 elif (det_type=="chan"):
     string_channels,string_types = utils.get_channels_map()
     det_types={}
+    name="channels"
     for string in string_channels.keys():
         chans = string_channels[string]
         types=string_types[string]
@@ -243,7 +244,8 @@ for region in summary.keys():
     axes_full[0].set_yscale("linear")
 
     ## make residual plot
-    residual = np.array([((d - m) / (m ** 0.5)) if d > -1 else 0 for d, m in zip(datas, meds)])
+    print(datas,meds)
+    residual = np.array([((d - m) / (m ** 0.5)) if m>0 else 0 for d, m in zip(datas, meds)])
 
     axes_full[1].errorbar(0.5+np.arange(len(names)),residual,yerr=np.ones(len(residual)),fmt="o",color=vset.blue,markersize=2)
     axes_full[1].axhline(y=0, color='black', linestyle='--', linewidth=1)
@@ -252,7 +254,8 @@ for region in summary.keys():
     axes_full[1].set_yscale("linear")
     axes_full[1].set_xlim(0,max(xs))
     axes_full[1].set_ylim(min(residual)-2,max(residual+2))
-    axes_full[1].xaxis.set_tick_params(top=False)
+    #axes_full[1].xaxis.set_tick_params(top=False)
+    axes_full[1].set_xticks(0.5+np.arange(len(names)),names,rotation=80)
 
     plt.tight_layout()
 

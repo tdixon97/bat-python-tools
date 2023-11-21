@@ -473,3 +473,36 @@ def get_channels_map():
         string_types[string]=channels_types
 
     return string_channels,string_types
+
+
+def get_livetime():
+    """ Get the livetime from the metadata"""
+
+    meta = LegendMetadata()
+
+    bad_runs=[("p04","r006"),("p07","r000")]
+    print(json.dumps(meta.dataprod.runinfo,indent=1))
+
+    print(meta.dataprod.runinfo.keys())
+    taup=0
+    vancouver=0
+    for period in meta.dataprod.runinfo.keys():
+        livetime_tot =0
+        for run in meta.dataprod.runinfo[period].keys():
+            
+            if ((period,run) in bad_runs):
+                continue
+            if "phy" in meta.dataprod.runinfo[period][run].keys():
+                time = meta.dataprod.runinfo[period][run]["phy"]["livetime_in_s"]
+                livetime_tot+=time
+                print("For run {} {} time = {}".format(run,period,time))
+
+        print("For period  {} livetime = {}".format(period,livetime_tot))
+        if (period=="p03" or period=="p04"):
+            taup +=livetime_tot
+            vancouver+=livetime_tot
+        if (period=="p06" or period=="p07"):
+            vancouver+=livetime_tot
+
+    print("Taup livetime = {}".format(taup))
+    print("Vancouver livetime = {}".format(vancouver))
