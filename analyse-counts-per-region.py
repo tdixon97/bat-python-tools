@@ -12,6 +12,7 @@ import argparse
 import re
 import utils
 import json
+import time
 
 
 vset = tc.tol_cset('vibrant')
@@ -47,6 +48,17 @@ det_type=args.det_type
 first_index =utils.find_and_capture(outfile,"hmixfit-l200a_taup_silver_dataset_")
 fit_name = outfile[first_index:-10]
 
+### get a list of detector types to consider
+
+if (det_type!="sum" and det_type!="str" and det_type!="chan"):
+    det_types={"icpc":["icpc"],
+            "ppc":["ppc"],
+            "bege":["bege"],
+            "coax":["coax"]
+            }
+elif (det_type=="sum"):
+    det_types={"all":["icpc","bege","ppc","coax"]}
+
 
 with open(cfg_file,"r") as file:
     cfg =json.load(file)
@@ -57,77 +69,100 @@ regions={"full": (565,2995),
          "Tl compton":(1900,2500),
          "Tl peak":(2600,2630)
          }
+eff_total={}
+### creat the efficiency maps (per dataset)
+for det_name, det_list in det_types.items():
 
-effs={"full":{},"2nu":{},"K peaks":{},"Tl compton":{},"Tl peak":{}}
+    effs={"full":{},"2nu":{},"K peaks":{},"Tl compton":{},"Tl peak":{}}
 
-if (det_type!="sum"):
-    effs=utils.get_efficiencies(cfg,spectrum,det_type,regions,pdf_path)
-else:
-    det_types=["icpc","bege","ppc","coax"]
-    for d in det_types:
-    
-        effs = utils.sum_effs(effs,utils.get_efficiencies(cfg,spectrum,d,regions,pdf_path))
+    for det in det_list:
+        effs=utils.sum_effs(effs,utils.get_efficiencies(cfg,spectrum,det,regions,pdf_path))
 
-print(json.dumps(effs,indent=1))
+    eff_total[det_name]=effs
 
 ### now open the MCMC file
-
+print(json.dumps(eff_total,indent=1))
 tree= "{}_mcmc".format(tree_name)
 df =utils.ttree2df(outfile,tree)
-print("Read dataframe")
-df=df.query("Phase==1")
-print("Quried to get Phase==1")
-
+df=df.query("Phase==1").iloc[0:500000]
 df=df.drop(columns=['Chain','Iteration','Phase','LogProbability','LogLikelihood','LogPrior'])
 
-print("Start computing sums")
+
+
 ### compute the sums of each column weighted by efficiiency 
-sums_full={}
-for key,eff in effs.items():
-    df_tmp= df.copy()
-    
-    eff_values = np.array(list(eff.values()))
-    eff_columns = list(eff.keys())
-    df_tmp[eff_columns] *= eff_values[np.newaxis,:]
-    
-    sums=np.array(df_tmp.sum(axis=1))
-    sums_full[key]=sums
+start_time = time.time()
+sums_total={}
+## loop over spectra
+for dataset,effs in eff_total.items():
+
+    sums_full={}
+    for key,eff in effs.items():
+        df_tmp= df.copy()
+        
+        eff_values = np.array(list(eff.values()))
+        eff_columns = list(eff.keys())
+        df_tmp[eff_columns] *= eff_values[np.newaxis,:]
+        
+        sums=np.array(df_tmp.sum(axis=1))
+        sums_full[key]=sums
+
+    sums_total[dataset]=sums_full
+end_time = time.time()
+
+# Calculate and print the elapsed time
+elapsed_time = end_time - start_time
+print(f"Elapsed time: {elapsed_time} seconds")
 
 ### get the correspondong counts in data
 file = uproot.open(data_path)
 time=0.1273
+data_counts_total={}
 
-data_counts={"full":0,"2nu":0,"Tl compton":0,"Tl peak":0,"K peaks":0}
+## loop over datasets
+for det_name,det_list in det_types.items():
 
-if (det_type!="sum"):
-    data_counts=utils.get_data_counts(spectrum,det_type,regions,file)
-else:
-    det_types=["icpc","bege","ppc","coax"]
-    for d in det_types:
-        data_counts = utils.sum_effs(data_counts,utils.get_data_counts(spectrum,d,regions,file))
+    data_counts={"full":0,"2nu":0,"Tl compton":0,"Tl peak":0,"K peaks":0}
+    for det in det_list:
+        data_counts = utils.sum_effs(data_counts,utils.get_data_counts(spectrum,det,regions,file))
 
-
+    data_counts_total[det_name]=data_counts
 
 
-fig, axes_full = lps.subplots(1, 1,figsize=(6, 4), sharex=True, gridspec_kw = { "hspace":0})
+summary={"full":{},"2nu":{},"Tl compton":{},"Tl peak":{},"K peaks":{}}
 
-for key in effs.keys():
-    fig, axes_full = lps.subplots(1, 1,figsize=(6, 4), sharex=True, gridspec_kw = { "hspace":0})
 
-    data = sums_full[key]*time
-    data_real = np.random.poisson(data)
-    range = (int(min(np.min(data_real),data_counts[key]))-0.5,int(max(np.max(data_real),data_counts[key]))+0.5)
+### loop over datasets
+for det_name in det_types:
+    
+    effs = eff_total[det_name]
+    data_counts =data_counts_total[det_name]
+    sums_full = sums_total[det_name]
 
-    bins = int(range[1]-range[0])
-    axes_full.hist(data,range=range,bins=bins,alpha=0.3,color=vset.blue,label="Estimated parameter")
-    axes_full.hist(data_real,range=range,bins=bins,alpha=0.3,color=vset.red,label="Expected realisations")
+    for key in effs.keys():
+        fig, axes_full = lps.subplots(1, 1,figsize=(6, 4), sharex=True, gridspec_kw = { "hspace":0})
 
-    axes_full.set_xlabel("counts")
-    axes_full.set_ylabel("Prob [arb]")
-    axes_full.plot(np.array([data_counts[key],data_counts[key]]),np.array([axes_full.get_ylim()[0],axes_full.get_ylim()[1]]),label="Data",color="black")
-    axes_full.set_title("Model reconstruction for {}".format(key))
-    plt.legend()
-    plt.savefig("plots/region_counts/{}_{}_{}.pdf".format(det_type,key,fit_name))
+        data = sums_full[key]*time
+        data_real = np.random.poisson(data)
+        med = np.percentile(data,50)
+        low = np.percentile(data,16)
+        high =np.percentile(data,50+34)
+        high-=med
+        low = med-low
+        summary[key][det_name]=[low,med,high]
 
+        range = (int(min(np.min(data_real),data_counts[key]))-0.5,int(max(np.max(data_real),data_counts[key]))+0.5)
+
+        bins = int(range[1]-range[0])
+        axes_full.hist(data,range=range,bins=bins,alpha=0.3,color=vset.blue,label="Estimated parameter")
+        axes_full.hist(data_real,range=range,bins=bins,alpha=0.3,color=vset.red,label="Expected realisations")
+
+        axes_full.set_xlabel("counts")
+        axes_full.set_ylabel("Prob [arb]")
+        axes_full.plot(np.array([data_counts[key],data_counts[key]]),np.array([axes_full.get_ylim()[0],axes_full.get_ylim()[1]]),label="Data",color="black")
+        axes_full.set_title("Model reconstruction for {} {:.2g}$^{{+{:.2g}}}_{{-{:.2g}}}$".format(key,med,high,low))
+        plt.legend()
+        plt.savefig("plots/region_counts/{}_{}_{}.pdf".format(det_name,key,fit_name))
+
+print(json.dumps(summary,1))
 plt.show()
 
