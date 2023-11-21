@@ -74,22 +74,24 @@ print(json.dumps(effs,indent=1))
 
 tree= "{}_mcmc".format(tree_name)
 df =utils.ttree2df(outfile,tree)
+print("Read dataframe")
 df=df.query("Phase==1")
-
+print("Quried to get Phase==1")
 
 df=df.drop(columns=['Chain','Iteration','Phase','LogProbability','LogLikelihood','LogPrior'])
+
+print("Start computing sums")
+### compute the sums of each column weighted by efficiiency 
 sums_full={}
 for key,eff in effs.items():
     df_tmp= df.copy()
     
-    for source,effi in eff.items():
-        df_tmp[source] *= effi
+    eff_values = np.array(list(eff.values()))
+    eff_columns = list(eff.keys())
+    df_tmp[eff_columns] *= eff_values[np.newaxis,:]
     
     sums=np.array(df_tmp.sum(axis=1))
-
     sums_full[key]=sums
-
-
 
 ### get the correspondong counts in data
 file = uproot.open(data_path)
@@ -102,11 +104,9 @@ if (det_type!="sum"):
 else:
     det_types=["icpc","bege","ppc","coax"]
     for d in det_types:
-        print(utils.get_data_counts(spectrum,d,regions,file))
         data_counts = utils.sum_effs(data_counts,utils.get_data_counts(spectrum,d,regions,file))
 
 
-print(json.dumps(data_counts,indent=1))
 
 
 fig, axes_full = lps.subplots(1, 1,figsize=(6, 4), sharex=True, gridspec_kw = { "hspace":0})
