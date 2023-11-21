@@ -56,9 +56,10 @@ if (det_type!="sum" and det_type!="str" and det_type!="chan"):
             "bege":["bege"],
             "coax":["coax"]
             }
+    name="by_type"
 elif (det_type=="sum"):
     det_types={"all":["icpc","bege","ppc","coax"]}
-
+    name="all"
 
 with open(cfg_file,"r") as file:
     cfg =json.load(file)
@@ -81,7 +82,6 @@ for det_name, det_list in det_types.items():
     eff_total[det_name]=effs
 
 ### now open the MCMC file
-print(json.dumps(eff_total,indent=1))
 tree= "{}_mcmc".format(tree_name)
 df =utils.ttree2df(outfile,tree)
 df=df.query("Phase==1").iloc[0:500000]
@@ -150,11 +150,11 @@ for det_name in det_types:
         low = med-low
         summary[key][det_name]=[low,med,high]
 
-        range = (int(min(np.min(data_real),data_counts[key]))-0.5,int(max(np.max(data_real),data_counts[key]))+0.5)
+        rangef = (int(min(np.min(data_real),data_counts[key]))-0.5,int(max(np.max(data_real),data_counts[key]))+0.5)
 
-        bins = int(range[1]-range[0])
-        axes_full.hist(data,range=range,bins=bins,alpha=0.3,color=vset.blue,label="Estimated parameter")
-        axes_full.hist(data_real,range=range,bins=bins,alpha=0.3,color=vset.red,label="Expected realisations")
+        bins = int(rangef[1]-rangef[0])
+        axes_full.hist(data,range=rangef,bins=bins,alpha=0.3,color=vset.blue,label="Estimated parameter")
+        axes_full.hist(data_real,range=rangef,bins=bins,alpha=0.3,color=vset.red,label="Expected realisations")
 
         axes_full.set_xlabel("counts")
         axes_full.set_ylabel("Prob [arb]")
@@ -163,6 +163,77 @@ for det_name in det_types:
         plt.legend()
         plt.savefig("plots/region_counts/{}_{}_{}.pdf".format(det_name,key,fit_name))
 
-print(json.dumps(summary,1))
+        plt.close()
+
+
+
+## now create the summary plots
+
+for region in summary.keys():
+    fig, axes_full = lps.subplots(2, 1, figsize=(6, 4), sharex=True, gridspec_kw = { 'height_ratios': [8, 2],"hspace":0})
+
+    
+    # loop over dataspectra
+    lows=[]
+    highs=[]
+    meds=[]
+    datas=[]
+    names=[]
+    for det in summary[region].keys():
+        params = summary[region][det]
+
+        low =params[1]-params[0]
+        high = params[1]+params[2]
+        med = params[1]
+
+        lows.append(low)
+        highs.append(high)
+        meds.append(med)
+        datas.append(data_counts_total[det][region])
+        names.append(det)
+    ## create the x and y array for fill between
+    xs=[0,1]
+    hlow=[lows[0],lows[0]]
+    hhigh=[highs[0],highs[0]]
+    data=[datas[0],datas[0]]
+    med=[meds[0],meds[0]]
+
+    names=np.array(names)
+
+    for i in range(1,len(names)):
+        xs.extend([i,i+1])
+        hlow.extend([lows[i],lows[i]])
+        hhigh.extend([highs[i],highs[i]])
+        data.extend([datas[i],datas[i]])
+        med.extend([meds[i],meds[i]])
+
+    axes_full[0].fill_between(xs,data,color=vset.blue,label="Data",alpha=0.3)
+
+    #axes_full.fill_between(xs,hlow,hhigh,color=vset.teal,alpha=0.3,label="Model prediction")
+    axes_full[0].plot(xs,med,color=vset.red,label="Best fit")
+
+    axes_full[0].set_xlabel("Detector type")
+    axes_full[0].set_ylabel("Counts")
+    axes_full[0].set_title("Counts per det type for {}".format(region))
+    axes_full[0].set_xticks(0.5+np.arange(len(names)),names,rotation=80)
+    axes_full[0].set_ylim(0,max(max(data),max(hhigh))*1.1)
+    axes_full[0].legend(loc="upper right")
+    axes_full[0].set_yscale("linear")
+
+    ## make residual plot
+    residual = np.array([((d - m) / (m ** 0.5)) if d > -1 else 0 for d, m in zip(datas, meds)])
+
+    axes_full[1].errorbar(0.5+np.arange(len(names)),residual,yerr=np.ones(len(residual)),fmt="o",color=vset.blue,markersize=2)
+    axes_full[1].axhline(y=0, color='black', linestyle='--', linewidth=1)
+    axes_full[1].set_xlabel("Energy (keV)")
+    axes_full[1].set_ylabel("Residual")
+    axes_full[1].set_yscale("linear")
+    axes_full[1].set_xlim(0,max(xs))
+    axes_full[1].set_ylim(-5,5)
+    axes_full[1].xaxis.set_tick_params(top=False)
+
+    plt.tight_layout()
+
+    plt.savefig("plots/region_counts/summary_{}_{}.pdf".format(region,name))
 plt.show()
 
