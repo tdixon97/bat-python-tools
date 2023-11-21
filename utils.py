@@ -338,5 +338,77 @@ def integrate_hist(hist,low,high):
     upper_index = np.searchsorted(bin_centers, high, side="left")
     bin_contents_range =values[lower_index:upper_index]
     bin_centers_range=bin_centers[lower_index:upper_index]
-    
+
     return np.sum(bin_contents_range)
+
+
+def get_efficiencies(cfg,spectrum,det_type,regions,pdf_path):
+    """ Get the efficiencies"""
+
+    effs={"full":{},"2nu":{},"K peaks":{},"Tl compton":{},"Tl peak":{}}
+
+
+    for key,region in regions.items():
+        effs[key]["2vbb_bege"]=0
+        effs[key]["2vbb_coax"]=0
+        effs[key]["2vbb_ppc"]=0
+        effs[key]["2vbb_icpc"]=0
+
+    icpc_comp_list=cfg["fit"]["theoretical-expectations"]["l200a-taup-silver-dataset.root"]["{}/{}".format(spectrum,
+                                                                                                           det_type)]["components"]
+
+    for comp in icpc_comp_list:
+        for key in comp["components"].keys():
+            par = key
+        ## now open the file
+
+        file = uproot.open(pdf_path+comp["root-file"])
+    
+        hist = file["{}/{}".format(spectrum,det_type)]
+        N  = int(file["number_of_primaries"])
+
+
+        hist = hist.to_hist()
+
+        for key,region in regions.items():
+
+            eff= float(integrate_hist(hist,region[0],region[1]))
+
+            effs[key][par]=eff/N
+
+    return effs
+   
+
+def sum_effs(eff1,eff2):
+    """ Sum the two efficiency dictonaries"""
+
+
+    dict_sum={}
+
+    for key in set(eff1) | set(eff2):  # Union of keys from both dictionaries
+
+        ## sum two layers
+        dict_sum[key]={}
+     
+        if (isinstance(eff1[key],dict) or isinstance(eff2[key],dict)):
+      
+            for key2 in set(eff1[key]) | set(eff2[key]):
+                dict_sum[key][key2] = eff1[key].get(key2, 0) + eff2[key].get(key2, 0)
+
+        ## sum one layer
+        else:
+            dict_sum[key]= eff1.get(key, 0) + eff2.get(key, 0)
+    return dict_sum
+
+
+def get_data_counts(spectrum,det_type,regions,file):
+    """Get the counts in the data in a range"""
+
+    hist =file["{}/{}".format(spectrum,det_type)]
+    data_counts={}
+
+    hist=hist.to_hist()
+    for region,range in regions.items():
+        data= float(integrate_hist(hist,range[0],range[1]))
+        
+        data_counts[region]=data

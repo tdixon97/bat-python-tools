@@ -46,14 +46,10 @@ spectrum = args.spectrum
 det_type=args.det_type
 first_index =utils.find_and_capture(outfile,"hmixfit-l200a_taup_silver_dataset_")
 fit_name = outfile[first_index:-10]
-print(fit_name)
+
 
 with open(cfg_file,"r") as file:
     cfg =json.load(file)
-
-
-icpc_comp_list=cfg["fit"]["theoretical-expectations"]["l200a-taup-silver-dataset.root"]["{}/{}".format(spectrum,det_type)]["components"]
-effs={"full":{},"2nu":{},"K peaks":{},"Tl compton":{},"Tl peak":{}}
 
 regions={"full": (565,2995),
         "2nu":(800,1300),
@@ -62,39 +58,17 @@ regions={"full": (565,2995),
          "Tl peak":(2600,2630)
          }
 
-for key,region in regions.items():
-    effs[key]["2vbb_bege"]=0
-    effs[key]["2vbb_coax"]=0
-    effs[key]["2vbb_ppc"]=0
-    effs[key]["2vbb_icpc"]=0
+effs={"full":{},"2nu":{},"K peaks":{},"Tl compton":{},"Tl peak":{}}
 
-
-for comp in icpc_comp_list:
-    print("File = {}".format(comp["root-file"]))
-    for key in comp["components"].keys():
-      
-        par = key
-
-    print("par = {} ".format(par))
-
-    ## now open the file
-
-    file = uproot.open(pdf_path+comp["root-file"])
-   
-    hist = file["{}/{}".format(spectrum,det_type)]
-    N  = int(file["number_of_primaries"])
-
-    ## use pyroot for the integral
-    hist = hist.to_hist()
-
-    for key,region in regions.items():
-
-        eff= float(utils.integrate_hist(hist,region[0],region[1]))
-
-        effs[key][par]=eff/N
-   
+if (det_type!="sum"):
+    effs=utils.get_efficiencies(cfg,spectrum,det_type,regions,pdf_path)
+else:
+    det_types=["icpc","bege","ppc","coax"]
+    for d in det_types:
     
+        effs = utils.sum_effs(effs,utils.get_efficiencies(cfg,spectrum,d,regions,pdf_path))
 
+print(json.dumps(effs,indent=1))
 
 ### now open the MCMC file
 
@@ -119,16 +93,21 @@ for key,eff in effs.items():
 
 ### get the correspondong counts in data
 file = uproot.open(data_path)
-
-hist =file["{}/{}".format(spectrum,det_type)]
-data_counts={}
 time=0.1273
-hist=hist.to_hist()
-for region,range in regions.items():
-    data= float(utils.integrate_hist(hist,range[0],range[1]))
-    
 
-    data_counts[region]=data
+data_counts={"full":0,"2nu":0,"Tl compton":0,"Tl peak":0,"K peaks":0}
+
+if (det_type!="sum"):
+    data_counts=utils.get_data_counts(spectrum,det_type,regions,file)
+else:
+    det_types=["icpc","bege","ppc","coax"]
+    for d in det_types:
+    
+        data_counts = utils.sum_effs(data_counts,utils.get_data_counts(spectrum,d,regions,file))
+
+
+print(json.dumps(data_counts,indent=1))
+
 
 fig, axes_full = lps.subplots(1, 1,figsize=(6, 4), sharex=True, gridspec_kw = { "hspace":0})
 
