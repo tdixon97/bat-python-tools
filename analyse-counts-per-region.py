@@ -249,13 +249,13 @@ for region in summary.keys():
 
     axes_full[1].errorbar(0.5+np.arange(len(names)),residual,yerr=np.ones(len(residual)),fmt="o",color=vset.blue,markersize=2)
     axes_full[1].axhline(y=0, color='black', linestyle='--', linewidth=1)
-    axes_full[1].set_xlabel("Dataset")
+    #axes_full[1].set_xlabel("Dataset")
     axes_full[1].set_ylabel("Residual")
     axes_full[1].set_yscale("linear")
     axes_full[1].set_xlim(0,max(xs))
     axes_full[1].set_ylim(min(residual)-2,max(residual+2))
     #axes_full[1].xaxis.set_tick_params(top=False)
-    axes_full[1].set_xticks(0.5+np.arange(len(names)),names,rotation=80)
+    axes_full[1].set_xticks(0.5+np.arange(len(names)),names,rotation=80,fontsize=10)
 
     plt.tight_layout()
 
