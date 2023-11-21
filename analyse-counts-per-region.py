@@ -102,7 +102,7 @@ if (det_type!="sum"):
 else:
     det_types=["icpc","bege","ppc","coax"]
     for d in det_types:
-    
+        print(utils.get_data_counts(spectrum,d,regions,file))
         data_counts = utils.sum_effs(data_counts,utils.get_data_counts(spectrum,d,regions,file))
 
 

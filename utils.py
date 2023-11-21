@@ -412,3 +412,5 @@ def get_data_counts(spectrum,det_type,regions,file):
         data= float(integrate_hist(hist,range[0],range[1]))
         
         data_counts[region]=data
+
+    return data_counts
