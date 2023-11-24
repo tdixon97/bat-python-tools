@@ -105,9 +105,10 @@ with open(cfg_file,"r") as file:
 
 regions={"full": (565,2995),
         "2nu":(800,1300),
-         "K peaks":(1400,1600),
+         "K40":(1455,1465),
+         "K42":(1520,1530),
          "Tl compton":(1900,2500),
-         "Tl peak":(2600,2630)
+         "Tl peak":(2605,2625)
          }
 eff_total={}
 ### creat the efficiency maps (per dataset)
@@ -115,7 +116,7 @@ for det_name, det_info in det_types.items():
     
     det_list=det_info["names"]
 
-    effs={"full":{},"2nu":{},"K peaks":{},"Tl compton":{},"Tl peak":{}}
+    effs={"full":{},"2nu":{},"K40":{},"K42":{},"Tl compton":{},"Tl peak":{}}
 
     for det,named in zip(det_list,det_info["types"]):
         eff_new,good = utils.get_efficiencies(cfg,spectrum,det,regions,pdf_path,named)
@@ -165,14 +166,14 @@ data_counts_total={}
 for det_name,det_info in det_types.items():
 
     det_list=det_info["names"]
-    data_counts={"full":0,"2nu":0,"Tl compton":0,"Tl peak":0,"K peaks":0}
+    data_counts={"full":0,"2nu":0,"Tl compton":0,"Tl peak":0,"K40":0,"K42":0}
     for det in det_list:
         data_counts = utils.sum_effs(data_counts,utils.get_data_counts(spectrum,det,regions,file))
 
     data_counts_total[det_name]=data_counts
 
 
-summary={"full":{},"2nu":{},"Tl compton":{},"Tl peak":{},"K peaks":{}}
+summary={"full":{},"2nu":{},"Tl compton":{},"Tl peak":{},"K40":{},"K42":{}}
 
 
 ### loop over datasets

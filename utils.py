@@ -356,7 +356,7 @@ def integrate_hist(hist,low,high):
 def get_efficiencies(cfg,spectrum,det_type,regions,pdf_path,name):
     """ Get the efficiencies"""
 
-    effs={"full":{},"2nu":{},"K peaks":{},"Tl compton":{},"Tl peak":{}}
+    effs={"full":{},"2nu":{},"K40":{},"K42":{},"Tl compton":{},"Tl peak":{}}
 
 
     for key,region in regions.items():
