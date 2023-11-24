@@ -59,7 +59,7 @@ def format_latex(list_str):
     return list_new
     
 
-def ttree2df(filename:str,tree_name:str)->pd.DataFrame:
+def ttree2df(filename:str,data:str)->pd.DataFrame:
     """Use uproot to import a TTree and save to a dataframe
     Parameters:
         - filename: file to open
@@ -71,7 +71,10 @@ def ttree2df(filename:str,tree_name:str)->pd.DataFrame:
     file = uproot.open(filename)
 
     # Access the TTree inside the file
-    tree = file[tree_name]
+
+    for key in file.keys():
+        if (data in key):
+            tree = file[key]
 
     # Get the list of branches in the TTree
     branches = tree.keys()
@@ -228,7 +231,7 @@ def plot_corr(df,i,j,labels,save):
 
 
 def make_error_bar_plot(indexs,labels:list,y:np.ndarray,ylow:np.ndarray,yhigh:np.ndarray,data,name_out,obj,
-                        y2=None,ylow2=None,yhigh2=None,label1=None,label2=None,extra=None,do_comp=0):
+                        y2=None,ylow2=None,yhigh2=None,label1=None,label2=None,extra=None,do_comp=0,low=0.1,scale="log",upper=0):
     """
     Make the error bar plot
     """
@@ -259,11 +262,11 @@ def make_error_bar_plot(indexs,labels:list,y:np.ndarray,ylow:np.ndarray,yhigh:np
         axes.errorbar(y=xin-0.15*len(y2)/30,x=y2,xerr=[ylow2,yhigh2],fmt="o",color=vset.red,ecolor=vset.orange,markersize=1,
                       label=label2)
 
-
-    upper = np.max(y+1.5*yhigh)
-    if (do_comp==True):
-        upper=max(upper,np.max(y2+1.5*yhigh2))
-        upper=upper*5
+    if (upper==0):
+        upper = np.max(y+1.5*yhigh)
+        if (do_comp==True):
+            upper=max(upper,np.max(y2+1.5*yhigh2))
+            upper=upper*5
     axes.set_yticks(xin, labels)
 
     if (obj=="fit_range"):
@@ -272,20 +275,20 @@ def make_error_bar_plot(indexs,labels:list,y:np.ndarray,ylow:np.ndarray,yhigh:np
 
     elif (obj=="bi_range"):
         axes.set_xlabel("Observed bkg counts / yr in {} data".format(data))
-        axes.set_xlim(0.1,upper)
+        axes.set_xlim(low,upper)
     elif (obj=="scaling_factor"):
         axes.set_xlabel("Scaling factor [1/yr] ")
         axes.set_xlim(1E-7,upper)
     elif obj=="parameter":
         axes.set_xlabel("Decays / yr [1/yr]")
-        axes.set_xlim(0.1,upper)
+        axes.set_xlim(low,upper)
  
     axes.set_yticks(axes.get_yticks())
     
     axes.set_yticklabels([val for val in labels], fontsize=8)
-    plt.xscale("log")
+    axes.set_xscale(scale)
     plt.grid()
-    leg=fig.legend(loc='upper right',bbox_to_anchor=(1.0, .9),frameon=True, facecolor='white')
+    leg=axes.legend(loc='upper right',bbox_to_anchor=(1.0, .9),frameon=True, facecolor='white')
     leg.set_zorder(10)    
 
     #plt.show()
@@ -303,6 +306,7 @@ def get_index_by_type(names):
     index_U = []
     index_Th =[]
     index_K=[]
+    index_2nu=[]
     
     for key in names:
        
@@ -313,9 +317,11 @@ def get_index_by_type(names):
         elif(key.find("K")!=-1):
         
             index_K.append(i)    
+        elif (key.find("2v")!=-1):
+            index_2nu.append(i)
         i=i+1
 
-    return {"U":index_U,"Th":index_Th,"K":index_K}
+    return {"U":index_U,"2nu":index_2nu,"Th":index_Th,"K":index_K}
 
 
 def get_from_df(df,obj):
@@ -359,9 +365,13 @@ def get_efficiencies(cfg,spectrum,det_type,regions,pdf_path,name):
         effs[key]["2vbb_ppc"]=0
         effs[key]["2vbb_icpc"]=0
 
-    if "{}/{}".format(spectrum,"icpc") in cfg["fit"]["theoretical-expectations"]["l200a-taup-silver-dataset.root"]:
+    for key in cfg["fit"]["theoretical-expectations"].keys():
+        if ".root" in key:
+            filename = key
+
+    if "{}/{}".format(spectrum,"icpc") in cfg["fit"]["theoretical-expectations"][filename]:
     
-        icpc_comp_list=cfg["fit"]["theoretical-expectations"]["l200a-taup-silver-dataset.root"]["{}/{}".format(spectrum,name)]["components"]
+        icpc_comp_list=cfg["fit"]["theoretical-expectations"][filename]["{}/{}".format(spectrum,name)]["components"]
     else:
         warnings.warn("{}/{} not in MC PDFs".format(spectrum,det_type))
         return effs,0
@@ -437,6 +447,49 @@ def get_data_counts(spectrum,det_type,regions,file):
 
     return data_counts
 
+
+def name2number(meta,name:str):
+    """Get the channel number given the name"""
+
+    meta = LegendMetadata()
+
+    chmap = meta.channelmap(datetime.now())
+
+    if name in chmap:
+
+        return f"ch{chmap[name].daq.rawid:07}"
+    else:
+        raise ValueError("Error detector {} does not have a number ".format(name))
+def number2name(meta,number:str):
+    """ Get the name given the number"""
+    
+ 
+    chmap = meta.channelmap(datetime.now())
+
+
+    for detector, dic in meta.dataprod.config.on(datetime.now())["analysis"].items():
+        if  f"ch{chmap[detector].daq.rawid:07}"==number:
+            return detector
+    raise ValueError("Error detector {} does not have a name".format(number))
+            
+def get_channel_floor(name:str):
+    """Get the z group for the detector"""
+
+    level_groups = {"top":["V02160A", "B00035C",  "B00032B", "B00000B", "V08682B", "V02162B", 'B00089C', 'B00002A', 'B00000D', 'B00000A' ,
+                         "C000RG1",  'B00091C', "B00000C", 'B00089D', 'B00089A', 'B00002C', 'B00002B'] , 
+                "mid_top":['V02160B', 'V08682A', 'V02166B', 
+                           'V05261B', 'C000RG2', 'P00574B', 'B00061A', 'C00ANG4', 'B00091A', 'B00032C', 'B00032A',
+                          'P00665A', 'B00061C','B00091D','B00032D','P00538B', 'B00076C','B00035A'], 
+                "mid":['V09372A', 'V04199A', 'V05266A', 'C00ANG3', 'V09374A', 'V04545A','V00048B', 'V05266B', 'C00ANG5', 'P00698A','V09724A', 'V05267B','V00050A','P00537A','P00573B',
+                      'P00712A','B00079B','V00050B','P00538A','B00035B','P00575A','P00909C','B00079C','P00573A','B00061B','P00574C','V01386A','P00661C','B00089B','P00661A','V00048A'], 
+                "mid_bottom":['V05268B','C00ANG2','V07646A','V05612A','V00074A','V01387A','P00661B','V05261A','P00574A','V01403A','P00662C','P00662A','V01404A','P00664A','V01240A','P00662B',
+                             'V01406A','P00665C','V01389A', 'P00665B', ], 
+                "bottom":['V07302B','V07647A','V04549A','V07647B','V07298B','V05268A','V07302A','V01415A', 'P00748B', 'V05267A', 'P00748A', 'P00909B', 'V05612B', 'P00698B', 'B00091B']}
+    
+    for key,chan_list in level_groups.items():
+        if name in chan_list:
+            return key
+    raise ValueError("Channel {} has no position ".format(name))
 
 def get_channels_map():
     """ Get the channels map"""

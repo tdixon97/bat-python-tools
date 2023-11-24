@@ -14,6 +14,8 @@ import utils
 import json
 import time
 import warnings
+from legendmeta import LegendMetadata
+
 
 vset = tc.tol_cset('vibrant')
 mset = tc.tol_cset('muted')
@@ -30,6 +32,8 @@ style = {
 parser = argparse.ArgumentParser(description='A script with command-line argument.')
 parser.add_argument('-d','--det_type', type=str, help='Detector type',default='icpc')
 parser.add_argument("-p","--pdf", type=str,help="Path to the PDFs")
+parser.add_argument("-a","--data", type=str,help="Path to the data")
+
 parser.add_argument("-c","--cfg", type=str,help="Fit cfg file",default="../hmixfit/inputs/cfg/l200a-taup-silver-m1.json")
 parser.add_argument("-o","--out_file",type=str,help="file",default="../hmixfit/results/hmixfit-l200a_taup_silver_dataset_m1_norm-_mcmc.root")
 parser.add_argument("-t","--tree_name",type=str,help="tree name",default="l200a_taup_silver_dataset_m1_norm")
@@ -38,19 +42,20 @@ args = parser.parse_args()
 
 outfile=args.out_file
 tree_name = args.tree_name
-pdf_path = "../hmixfit/inputs/pdfs/l200a-pdfs-v0.3.0-silver/"
-data_path ="../hmixfit/inputs/data/l200a-taup-silver-dataset.root"
+pdf_path =args.pdf
+data_path =args.data
 args = parser.parse_args()
 
 cfg_file = args.cfg
 spectrum = args.spectrum
 det_type=args.det_type
-first_index =utils.find_and_capture(outfile,"hmixfit-l200a_taup_silver_dataset_")
+first_index =utils.find_and_capture(outfile,"hmixfit-l200a_")
 fit_name = outfile[first_index:-10]
 
 ### get a list of detector types to consider
+meta = LegendMetadata()
 
-if (det_type!="sum" and det_type!="str" and det_type!="chan"):
+if (det_type!="sum" and det_type!="str" and det_type!="chan" and det_type!="floor"):
     det_types={"icpc": {"names":["icpc"],"types":["icpc"]},
                "bege": {"names":["bege"],"types":["bege"]},
                "ppc": {"names":["ppc"],"types":["ppc"]},
@@ -76,6 +81,22 @@ elif (det_type=="chan"):
 
         for chan,type in zip(chans,types):
             det_types[chan]={"names":[chan],"types":[type]}
+
+elif (det_type=="floor"):
+    string_channels,string_types = utils.get_channels_map()
+    groups=["top","mid_top","mid","mid_bottom","bottom"]
+    det_types={}
+    for group in groups:
+        det_types[group]={"names":[],"types":[]}
+    
+    for string in string_channels.keys():
+        channels = string_channels[string]
+        for i in range(len(channels)):
+            chan = channels[i]
+            name = utils.number2name(meta,chan)
+            group = utils.get_channel_floor(name)
+            det_types[group]["names"].append(chan)
+            det_types[group]["types"].append(string_types[string][i])
 
 print(json.dumps(det_types,indent=1))
 
@@ -105,7 +126,7 @@ for det_name, det_info in det_types.items():
 
 ### now open the MCMC file
 tree= "{}_mcmc".format(tree_name)
-df =utils.ttree2df(outfile,tree)
+df =utils.ttree2df(outfile,"mcmc")
 df=df.query("Phase==1").iloc[0:500000]
 df=df.drop(columns=['Chain','Iteration','Phase','LogProbability','LogLikelihood','LogPrior'])
 
@@ -137,7 +158,7 @@ print(f"Elapsed time: {elapsed_time} seconds")
 
 ### get the correspondong counts in data
 file = uproot.open(data_path)
-time=0.1273
+time=cfg["livetime"]
 data_counts_total={}
 
 ## loop over datasets
@@ -214,6 +235,7 @@ for region in summary.keys():
         meds.append(med)
         datas.append(data_counts_total[det][region])
         names.append(det)
+        
     ## create the x and y array for fill between
     xs=[0,1]
     hlow=[lows[0],lows[0]]
@@ -238,24 +260,38 @@ for region in summary.keys():
     axes_full[0].set_xlabel("Detector type")
     axes_full[0].set_ylabel("Counts")
     axes_full[0].set_title("Counts per det type for {}".format(region))
-    axes_full[0].set_xticks(0.5+np.arange(len(names)),names,rotation=80)
+    axes_full[0].set_xticks(0.5+np.arange(len(names)),names,rotation=80,fontsize=6)
     axes_full[0].set_ylim(0,max(max(data),max(hhigh))*1.1)
     axes_full[0].legend(loc="upper right")
     axes_full[0].set_yscale("linear")
 
     ## make residual plot
-    print(datas,meds)
-    residual = np.array([((d - m) / (m ** 0.5)) if m>0 else 0 for d, m in zip(datas, meds)])
+    
+    for d,m,c in zip(datas,meds,names):
+        if ((d>0)and (m==0)):
+            print("For {} there are data events but not MC ".format(c))
+        if ((d==0) and (m>0)):
+            print("For {} there are MC events but notdata ".format(c))
 
+    residual = np.array([((d - m) / (m ** 0.5)) if m>0 else 0 for d, m in zip(datas, meds)])
+    name_plot=names
+    if (det_type=="chan"):
+        for i in range(len(names)):
+            name_tmp = utils.number2name(meta,names[i])
+
+            name_plot[i]=name_tmp
+        
     axes_full[1].errorbar(0.5+np.arange(len(names)),residual,yerr=np.ones(len(residual)),fmt="o",color=vset.blue,markersize=2)
     axes_full[1].axhline(y=0, color='black', linestyle='--', linewidth=1)
-    #axes_full[1].set_xlabel("Dataset")
     axes_full[1].set_ylabel("Residual")
     axes_full[1].set_yscale("linear")
     axes_full[1].set_xlim(0,max(xs))
     axes_full[1].set_ylim(min(residual)-2,max(residual+2))
-    #axes_full[1].xaxis.set_tick_params(top=False)
-    axes_full[1].set_xticks(0.5+np.arange(len(names)),names,rotation=80,fontsize=10)
+    fontsize=10
+    if (det_type=="chan"):
+        fontsize=4
+
+    axes_full[1].set_xticks(0.5+np.arange(len(name_plot)),name_plot,rotation=80,fontsize=fontsize)
 
     plt.tight_layout()
 

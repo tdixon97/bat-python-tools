@@ -47,13 +47,13 @@ tree_name = args.tree_name
 make_plots=args.make_plots
 
 
-tree= "{}_mcmc".format(tree_name)
-df =utils.ttree2df(outfile,tree)
+df =utils.ttree2df(outfile,"mcmc")
 df=df.query("Phase==1")
 
 
 df=df.drop(columns=['Chain','Iteration','Phase','LogProbability','LogLikelihood','LogPrior','Ar39_homogeneous'])
 
+print(df)
 ### make the name key
 names={"Index":[],"Name":[]}
 names_U={"Index":[],"Name":[]}
@@ -88,16 +88,16 @@ for key in df.keys():
     
     i=i+1
 df_key = pd.DataFrame(names)
-utils.plot_table(df_key,"plots/key_{}.pdf".format(tree_name))
+utils.plot_table(df_key,"plots/fit_correlations/key_{}.pdf".format(tree_name))
 
 df_key_U = pd.DataFrame(names_U)
-utils.plot_table(df_key_U,"plots/key_U_{}.pdf".format(tree_name))
+utils.plot_table(df_key_U,"plots/fit_correlations/key_U_{}.pdf".format(tree_name))
 
 df_key_Th = pd.DataFrame(names_Th)
-utils.plot_table(df_key_Th,"plots/key_Th_{}.pdf".format(tree_name))
+utils.plot_table(df_key_Th,"plots/fit_correlations/key_Th_{}.pdf".format(tree_name))
 
 df_key_K = pd.DataFrame(names_K)
-utils.plot_table(df_key_K,"plots/key_K_{}.pdf".format(tree_name))
+utils.plot_table(df_key_K,"plots/fit_correlations/key_K_{}.pdf".format(tree_name))
 
 
 ### make the full correlation matrix and subplots

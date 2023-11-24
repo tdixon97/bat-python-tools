@@ -6,14 +6,26 @@
       "Nvbb_coax",
       "Nvbb_ppc"
     ],
-    "style": {
+      "style": {
+	            "linewidth":0.6,
       "color": "#999933",
       "label": "$2\\nu\\beta\\beta$"
     }
   },
+     "alpha": {
+    "hists": [
+      "alpha_bege",
+      "alpha_icpc",
+      "alpha_coax",
+      "alpha_ppc"
+    ],
+    "style": {
+                "linewidth":0.6,
+	"label": "$\\alpha$"
+    }
+  },
   "Th": {
     "hists": [
-      "Ac228_pen_plates",
       "Bi212Tl208_birds_nest",
       "Bi212Tl208_cables",
       "Bi212Tl208_fiber_shroud",
@@ -21,9 +33,11 @@
       "Bi212Tl208_hpge_support_copper",
       "Bi212Tl208_mini_shroud",
       "Bi212Tl208_pen_plates",
-      "Bi212Tl208_wls_reflector"
+	"Bi212Tl208_wls_reflector",
+	"Ac228_pen_plates"
     ],
-    "style": {
+      "style": {
+	  "linewidth":0.6,
       "color": "#33BBEE",
       "label": "Thorium"
     }
@@ -41,7 +55,8 @@
     ],
     "style": {
       "color": "#009988",
-      "label": "Uranium"
+	"label": "Uranium",
+	          "linewidth":0.6
     }
   },
   "K40": {
@@ -53,7 +68,8 @@
     ],
     "style": {
       "color": "#CC3311",
-      "label": "$^{40}$K"
+	"label": "$^{40}$K",
+	          "linewidth":0.6
     }
   },
   "K42": {
@@ -65,18 +81,20 @@
     ],
     "style": {
       "color": "#EE3377",
-      "label": "$^{42}$K"
+	"label": "$^{42}$K",
+	          "linewidth":0.6
     }
   },
-  "Ar39": {
-    "hists": [
-      "Ar39_homogeneous"
-    ],
-    "style": {
-      "color": "#5b2c6f",
-      "label": "$^{39}$Ar"
-    }
-  },
+    "Co60":{
+	"hists":
+	["Co60_cables",
+	 "Co60_hpge_support_copper"
+	],
+	"style":{          "linewidth":0.6,
+    "label":"$^{60}$Co"}
+    },
+    
+	    
   "total_model": {
     "hists": [
       "total_model"
@@ -98,3 +116,4 @@
     }
   }
 }
+
