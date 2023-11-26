@@ -33,7 +33,8 @@ parser = argparse.ArgumentParser(description='A script with command-line argumen
 parser.add_argument('-d','--det_type', type=str, help='Detector type',default='icpc')
 parser.add_argument("-p","--pdf", type=str,help="Path to the PDFs")
 parser.add_argument("-a","--data", type=str,help="Path to the data")
-
+parser.add_argument('-e','--data_sel', type=str, help='Detector type',default='icpc')
+parser.add_argument('-S','--string_sel', type=int, help='string to select',default=0)
 parser.add_argument("-c","--cfg", type=str,help="Fit cfg file",default="../hmixfit/inputs/cfg/l200a-taup-silver-m1.json")
 parser.add_argument("-o","--out_file",type=str,help="file",default="../hmixfit/results/hmixfit-l200a_taup_silver_dataset_m1_norm-_mcmc.root")
 parser.add_argument("-t","--tree_name",type=str,help="tree name",default="l200a_taup_silver_dataset_m1_norm")
@@ -51,6 +52,8 @@ spectrum = args.spectrum
 det_type=args.det_type
 first_index =utils.find_and_capture(outfile,"hmixfit-l200a_")
 fit_name = outfile[first_index:-10]
+det_sel=args.data_sel
+string_sel=args.string_sel
 
 ### get a list of detector types to consider
 meta = LegendMetadata()
@@ -61,31 +64,33 @@ if (det_type!="sum" and det_type!="str" and det_type!="chan" and det_type!="floo
                "ppc": {"names":["ppc"],"types":["ppc"]},
                "coax": {"names":["coax"],"types":["coax"]}
             }
-    name="by_type"
+    namet="by_type"
 elif (det_type=="sum"):
     det_types={"all":{"names":["icpc","bege","ppc","coax"],"types":["icpc","bege","ppc","coax"]}}
-    name="all"
+    namet="all"
 elif(det_type=="str"):
     string_channels,string_types = utils.get_channels_map()
     det_types={}
     for string in string_channels.keys():
         det_types[string]={"names":string_channels[string],"types":string_types[string]}
-    name="string"
+    namet="string"
 elif (det_type=="chan"):
     string_channels,string_types = utils.get_channels_map()
     det_types={}
-    name="channels"
+    namet="channels"
     for string in string_channels.keys():
-        chans = string_channels[string]
-        types=string_types[string]
+        if (string_sel==0 or string_sel==string):
+            chans = string_channels[string]
+            types=string_types[string]
 
-        for chan,type in zip(chans,types):
-            det_types[chan]={"names":[chan],"types":[type]}
+            for chan,type in zip(chans,types):
+                det_types[chan]={"names":[chan],"types":[type]}
 
 elif (det_type=="floor"):
     string_channels,string_types = utils.get_channels_map()
     groups=["top","mid_top","mid","mid_bottom","bottom"]
     det_types={}
+    namet="floor"
     for group in groups:
         det_types[group]={"names":[],"types":[]}
     
@@ -95,8 +100,10 @@ elif (det_type=="floor"):
             chan = channels[i]
             name = utils.number2name(meta,chan)
             group = utils.get_channel_floor(name)
-            det_types[group]["names"].append(chan)
-            det_types[group]["types"].append(string_types[string][i])
+            
+            if (string_sel==0 or string_sel==string):
+                det_types[group]["names"].append(chan)
+                det_types[group]["types"].append(string_types[string][i])
 
 print(json.dumps(det_types,indent=1))
 
@@ -119,8 +126,9 @@ for det_name, det_info in det_types.items():
     effs={"full":{},"2nu":{},"K40":{},"K42":{},"Tl compton":{},"Tl peak":{}}
 
     for det,named in zip(det_list,det_info["types"]):
-        eff_new,good = utils.get_efficiencies(cfg,spectrum,det,regions,pdf_path,named)
-        if (good==1):
+        eff_new,good = utils.get_efficiencies(cfg,spectrum,det,regions,pdf_path,named,"mul_surv")
+        print(named)
+        if (good==1 and (named==det_sel or det_sel=="all")):
             effs=utils.sum_effs(effs,eff_new)
 
     eff_total[det_name]=effs
@@ -166,9 +174,11 @@ data_counts_total={}
 for det_name,det_info in det_types.items():
 
     det_list=det_info["names"]
+    dt=det_info["types"]
     data_counts={"full":0,"2nu":0,"Tl compton":0,"Tl peak":0,"K40":0,"K42":0}
-    for det in det_list:
-        data_counts = utils.sum_effs(data_counts,utils.get_data_counts(spectrum,det,regions,file))
+    for det,type in zip(det_list,dt):
+        if (type==det_sel or det_sel=="all"):
+            data_counts = utils.sum_effs(data_counts,utils.get_data_counts(spectrum,det,regions,file))
 
     data_counts_total[det_name]=data_counts
 
@@ -182,12 +192,16 @@ for det_name in det_types:
     effs = eff_total[det_name]
     data_counts =data_counts_total[det_name]
     sums_full = sums_total[det_name]
-    print(det_name)
+    
     for key in effs.keys():
-        fig, axes_full = lps.subplots(1, 1,figsize=(6, 4), sharex=True, gridspec_kw = { "hspace":0})
+        fig, axes_full = lps.subplots(1, 1,figsize=(5, 4), sharex=True, gridspec_kw = { "hspace":0})
 
         data = sums_full[key]*time
         data_real = np.random.poisson(data)
+        if (data[0]>1E7):
+            print("Too many counts for {}".format(key))
+            data*=0
+            data_real*=0
         med = np.percentile(data,50)
         low = np.percentile(data,16)
         high =np.percentile(data,50+34)
@@ -198,6 +212,8 @@ for det_name in det_types:
         rangef = (int(min(np.min(data_real),data_counts[key]))-0.5,int(max(np.max(data_real),data_counts[key]))+0.5)
       
         bins = int(rangef[1]-rangef[0])
+        
+        
         axes_full.hist(data,range=rangef,bins=bins,alpha=0.3,color=vset.blue,label="Estimated parameter")
         axes_full.hist(data_real,range=rangef,bins=bins,alpha=0.3,color=vset.red,label="Expected realisations")
 
@@ -206,7 +222,7 @@ for det_name in det_types:
         axes_full.plot(np.array([data_counts[key],data_counts[key]]),np.array([axes_full.get_ylim()[0],axes_full.get_ylim()[1]]),label="Data",color="black")
         axes_full.set_title("Model reconstruction for {} {:.2g}$^{{+{:.2g}}}_{{-{:.2g}}}$".format(key,med,high,low))
         plt.legend()
-        plt.savefig("plots/region_counts/count_{}_{}_{}.pdf".format(det_name,key,fit_name))
+        plt.savefig("plots/region_counts/counts/count_{}_{}_{}.pdf".format(det_name,key,fit_name))
 
         plt.close()
 
@@ -215,7 +231,7 @@ for det_name in det_types:
 ## now create the summary plots
 
 for region in summary.keys():
-    fig, axes_full = lps.subplots(2, 1, figsize=(6, 4), sharex=True, gridspec_kw = { 'height_ratios': [8, 2],"hspace":0})
+    fig, axes_full = lps.subplots(2, 1, figsize=(6, 6), sharex=True, gridspec_kw = { 'height_ratios': [8, 2],"hspace":0})
 
     
     # loop over dataspectra
@@ -296,6 +312,6 @@ for region in summary.keys():
 
     plt.tight_layout()
 
-    plt.savefig("plots/region_counts/summary_{}_{}.pdf".format(region,name))
+    plt.savefig("plots/region_counts/summary_{}_{}_{}_{}_string_{}.pdf".format(region,namet,spectrum,det_sel,string_sel))
 plt.show()
 
