@@ -38,6 +38,7 @@ parser.add_argument("-b","--bins",type=int,help="Binning",default=15)
 parser.add_argument("-r","--regions",type=int,help="Shade regions",default=0)
 parser.add_argument("-f","--fit_name",type=str,help="fit name",default="l200a_vancouver23_dataset_v0_1")
 
+parser.add_argument("-w","--width",type=int,help="width for canvas",default=6)
 
 ### read the arguments
 
@@ -54,16 +55,19 @@ name_out = outfile[first_index:-16]
 fit_name = args.fit_name
 json_file =args.components
 bin = args.bins
-exclude_range=(1455,1540)
+exclude_range=(1450,1540)
+exclude_range=0
+width=args.width
 comp_name = json_file[:-5]
 shade_regions=args.regions
 
 regions={"$2\\nu\\beta\\beta$":(800,1300),
-         "K peaks":(1400,1600),
+         "K40":(1455,1465),
+         "K42":(1520,1530),
          "Tl compton":(1900,2500),
          "Tl peak":(2600,2630)
          }
-colors=[vset.red,vset.orange,vset.magenta,vset.teal]
+colors=[vset.red,vset.orange,vset.magenta,vset.teal,"grey"]
 
 
 with open(json_file, 'r') as file:
@@ -89,9 +93,9 @@ if det_type!="multi":
 
 ## create the axes
 if (det_type=="multi" ):
-    fig, axes = lps.subplots(len(datasets), 1, figsize=(6, y), sharex=True, gridspec_kw = {'hspace': 0})
+    fig, axes = lps.subplots(len(datasets), 1, figsize=(width, y), sharex=True, gridspec_kw = {'hspace': 0})
 else:
-    fig, axes_full = lps.subplots(2, 1, figsize=(6, y), sharex=True, gridspec_kw = { 'height_ratios': [8, 2],"hspace":0})
+    fig, axes_full = lps.subplots(2, 1, figsize=(width, y), sharex=True, gridspec_kw = { 'height_ratios': [8, 2],"hspace":0})
 
 if det_type=="multi":
     for ax in axes:
@@ -135,7 +139,7 @@ with uproot.open(outfile) as f:
             for name in info["hists"]:
 
 
-                if get_originals=="True":
+                if get_originals==True:
                     if name not in f[ds]["originals"]:
                         #raise ValueError("PDF {} not in f[{}]".format(name,ds))
                         continue
@@ -160,17 +164,6 @@ with uproot.open(outfile) as f:
             ### scale for bin width
             bin_widths = np.diff(hs[comp].axes.edges[0])
             
-
-            ### rescale bin contents
-            for i in range(hs[comp].size - 2):
-                E=hs[comp].axes.centers[0][i]
-        
-                if hs[comp][i] == 0:
-                
-                    hs[comp][i] = 1.05*ylowlim
-                if (get_originals==False):
-                    hs[comp][i]*=10/bin_widths[i]
-            
             if (det_type=="sum" and ds!=datasets[-1]):
                 continue
             
@@ -185,6 +178,17 @@ with uproot.open(outfile) as f:
                 bin_widths = np.diff(hs[comp].axes.edges[0])
 
           
+            ### rescale bin contents
+            for i in range(hs[comp].size - 2):
+                E=hs[comp].axes.centers[0][i]
+        
+                if hs[comp][i] == 0:
+                
+                    hs[comp][i] = 1.05*ylowlim
+            
+                if (get_originals==False):
+                    hs[comp][i]*=10./bin_widths[i]
+
             hs[comp].plot(ax=ax, **style, **info["style"])
 
            
@@ -192,9 +196,9 @@ with uproot.open(outfile) as f:
                 continue
         
         if (get_originals==False):
-            residual = np.array([((d - m) / (m ** 0.5)) if d > -1 else 0 for d, m in zip(data, pred)])
+            residual = np.array([((d - m) / (d ** 0.5)) if d > 0.5 else 0 for d, m in zip(data, pred)])
         else:
-            residual = np.array([((d*s/10 - m*s/10) / ((m*s/10) ** 0.5)) if d > -1 else 0 for d, m,s in zip(data, pred,bin_widths)])
+            residual = np.array([((d*s/10 - m*s/10) / ((d*s/10) ** 0.5)) if d > 0.5 else (d*s/10 - m*s/10) for d, m,s in zip(data, pred,bin_widths)])
 
         
         masked_values = np.ma.masked_where((bins > xhigh)  | (bins < xlow), pred)
@@ -214,15 +218,15 @@ with uproot.open(outfile) as f:
             for region in regions.keys():
                 range = regions[region]
                 ax.fill_between(np.array([range[0],range[1]]),np.array([max_y,max_y]),
-                                label=region,alpha=0.3,color=colors[idx])
+                                label=region,alpha=0.3,color=colors[idx],linewidth=0)
                 idx+=1
 
         if (exclude_range!=0):
             ax.fill_between(np.array([exclude_range[0],exclude_range[1]]),np.array([max_y,max_y]),
-                                label="Not incl. in fit",alpha=0.5,color="grey",linewidth=0)
+                                label="Not in fit",alpha=0.5,color="grey",linewidth=0)
 
         if ds == datasets[0] or det_type=="sum":
-            legend=ax.legend(loc="upper right", ncols=3,frameon=True,facecolor="white")
+            legend=ax.legend(loc='upper right',edgecolor="black",frameon=True, facecolor='white',framealpha=1)
             ax.set_legend_annotation()
             
         elif ds==datasets[len(datasets)-1]:
@@ -235,7 +239,8 @@ with uproot.open(outfile) as f:
             ax.set_legend_logo(position='upper left', logo_type = 'preliminary', scaling_factor=7)
 
 
-
+        #ax.grid(True, which='both', linestyle='-', linewidth=0.01)
+        #ax.minorticks_on()
 
         if (det_type=="multi"):
             ax.set_xlabel("Energy (keV)")
@@ -246,7 +251,8 @@ with uproot.open(outfile) as f:
 
         ### now plot the residual
         if (det_type!="multi"):
-            
+            #axes_full[1].grid(True, which='both', linestyle='--', linewidth=0.01)
+            #axes_full[1].minorticks_off()
             axes_full[1].errorbar(bins,residual,yerr=np.ones(len(residual)),fmt="o",color=vset.blue,markersize=1,linewidth=0.6)
             axes_full[1].axhline(y=0, color='black', linestyle='--', linewidth=1)
             axes_full[1].set_xlabel("Energy (keV)")
@@ -267,5 +273,4 @@ plt.tight_layout()
 #plt.show()
 plt.savefig("plots/fit_plots/{}_{}_{}_{}_to_{}_{}_{}.pdf".format(name_out,det_type,scale,xlow,xhigh,bin,comp_name))
 plt.show()
-
 
