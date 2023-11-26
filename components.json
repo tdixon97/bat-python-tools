@@ -39,7 +39,7 @@
       "style": {
 	  "linewidth":0.6,
       "color": "#33BBEE",
-      "label": "Thorium"
+      "label": "Th"
     }
   },
   "U": {
@@ -55,7 +55,7 @@
     ],
     "style": {
       "color": "#009988",
-	"label": "Uranium",
+	"label": "U",
 	          "linewidth":0.6
     }
   },
