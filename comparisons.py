@@ -41,6 +41,7 @@ parser.add_argument("-a","--compare_data",type=int or bool,help="Compare data (t
 
 parser.add_argument("-o","--label_1",type=str,help="label for first histo",default="raw")
 parser.add_argument("-t","--label_2",type=str,help="label for second hist",default="m1")
+parser.add_argument("-f","--fit_name",type=str,help="fit name",default="l200a_vancouver23_dataset_v0_1")
 
 
 ### read the args
@@ -60,29 +61,30 @@ bin = args.bins
 compare_data =args.compare_data
 label_1=args.label_1
 label_2=args.label_2
+fit_name = args.fit_name
 
 def get_hist(obj):
     return obj.to_hist()[132:2982][hist.rebin(bin)]
 
 
-if det_type=="all" or det_type=="sum":
-    datasets = ["l200a_taup_silver_dataset_bege", "l200a_taup_silver_dataset_icpc","l200a_taup_silver_dataset_ppc","l200a_taup_silver_dataset_coax"]
+if det_type=="multi" or det_type=="sum":
+    datasets = ["{}_bege".format(fit_name), "{}_icpc".format(fit_name),"{}_ppc".format(fit_name),"{}_coax".format(fit_name)]
 else:
-    datasets=["l200a_taup_silver_dataset_{}".format(det_type)]
+    datasets=["{}_{}".format(fit_name,det_type)]
 
 
 y=6
-if det_type!="all":
+if det_type!="multi":
     y=4
 
 ## create the axes
-if (det_type=="all"):
+if (det_type=="multi"):
     fig, axes = lps.subplots(len(datasets), 1, figsize=(6, y), sharex=True, gridspec_kw = {'hspace': 0})
 else:
     fig, axes_full = lps.subplots(2, 1, figsize=(6, y), sharex=True, gridspec_kw = { 'height_ratios': [8, 2],"hspace":0})
 
 
-if det_type=="all":
+if det_type=="multi":
     for ax in axes:
         ax.set_axisbelow(True)
         ax.tick_params(axis="both", which="both", direction="in")
@@ -100,7 +102,7 @@ with uproot.open(in_file_1) as f1:
         hdata=None
         for i  in range(len(datasets)):
             ds=datasets[i]
-            if (det_type=="all"):
+            if (det_type=="multi"):
                 ax=axes[i]
             else:
                 ax=axes[0]
@@ -115,7 +117,7 @@ with uproot.open(in_file_1) as f1:
                     
             if name not in f2[ds]["originals"]:
                 raise ValueError("Error: the PDF doesnt exist")
-            if (det_type=="all" or h1 is None or h2 is None):
+            if (det_type=="multi" or h1 is None or h2 is None):
                 h1 = get_hist(f1[ds]["originals"][name])
                 h2 = get_hist(f2[ds]["originals"][name])
             else:
@@ -124,7 +126,7 @@ with uproot.open(in_file_1) as f1:
           
             ### compare data
             if (compare_data==False):
-                if (det_type=="all" or hdata is None):
+                if (det_type=="multi" or hdata is None):
                     hdata= get_hist(f1[ds]["originals"]["fitted_data"])
                 else:
                     hdata += get_hist(f1[ds]["originals"]["fitted_data"])
@@ -188,14 +190,14 @@ with uproot.open(in_file_1) as f1:
                 max_y=3*max_y
             ax.set_yscale("linear")
             ax.set_ylim(bottom=ylowlim,top=max_y)      
-            if (det_type=="all"):
+            if (det_type=="multi"):
                 ax.set_xlabel("Energy (keV)")
             ax.set_ylabel("Counts / 15 keV")
             ax.set_yscale(scale)
             ax.set_xlim(xlow,xhigh)
             
             ### now plot the residual
-            if (det_type!="all"):
+            if (det_type!="multi"):
                 
                 axes_full[1].plot(bins,residual,color=vset.blue,markersize=0)
                 axes_full[1].set_xlabel("Energy (keV)")
