@@ -250,7 +250,7 @@ def make_error_bar_plot(indexs,labels:list,y:np.ndarray,ylow:np.ndarray,yhigh:np
         y2=y2[indexs]
 
     height= 2+4*len(y)/29
-    fig, axes = lps.subplots(1, 1, figsize=(6, height), sharex=True, gridspec_kw = {'hspace': 0})
+    fig, axes = lps.subplots(1, 1, figsize=(8, height), sharex=True, gridspec_kw = {'hspace': 0})
 
     xin=np.arange(len(labels))
     
@@ -288,7 +288,7 @@ def make_error_bar_plot(indexs,labels:list,y:np.ndarray,ylow:np.ndarray,yhigh:np
     axes.set_yticklabels([val for val in labels], fontsize=8)
     axes.set_xscale(scale)
     plt.grid()
-    leg=axes.legend(loc='upper right',bbox_to_anchor=(1.0, .9),frameon=True, facecolor='white')
+    leg=axes.legend(loc='best',edgecolor="black",frameon=True, facecolor='white',framealpha=1)
     leg.set_zorder(10)    
 
     #plt.show()
@@ -353,11 +353,13 @@ def integrate_hist(hist,low,high):
     return np.sum(bin_contents_range)
 
 
-def get_efficiencies(cfg,spectrum,det_type,regions,pdf_path,name):
+def get_efficiencies(cfg,spectrum,det_type,regions,pdf_path,name,spectrum_fit=""):
     """ Get the efficiencies"""
 
     effs={"full":{},"2nu":{},"K40":{},"K42":{},"Tl compton":{},"Tl peak":{}}
 
+    if (spectrum_fit==""):
+        spectrum_fit=spectrum
 
     for key,region in regions.items():
         effs[key]["2vbb_bege"]=0
@@ -369,11 +371,11 @@ def get_efficiencies(cfg,spectrum,det_type,regions,pdf_path,name):
         if ".root" in key:
             filename = key
 
-    if "{}/{}".format(spectrum,"icpc") in cfg["fit"]["theoretical-expectations"][filename]:
+    if "{}/{}".format(spectrum_fit,"icpc") in cfg["fit"]["theoretical-expectations"][filename]:
     
-        icpc_comp_list=cfg["fit"]["theoretical-expectations"][filename]["{}/{}".format(spectrum,name)]["components"]
+        icpc_comp_list=cfg["fit"]["theoretical-expectations"][filename]["{}/{}".format(spectrum_fit,name)]["components"]
     else:
-        warnings.warn("{}/{} not in MC PDFs".format(spectrum,det_type))
+        warnings.warn("{}/{} not in MC PDFs".format(spectrum_fit,det_type))
         return effs,0
     comp_list = copy.deepcopy(icpc_comp_list)
     
@@ -381,7 +383,7 @@ def get_efficiencies(cfg,spectrum,det_type,regions,pdf_path,name):
         for key in comp["components"].keys():
             par = key
         ## now open the file
-
+            
         file = uproot.open(pdf_path+comp["root-file"])
         
         if "{}/{}".format(spectrum,det_type) in file:
@@ -392,6 +394,7 @@ def get_efficiencies(cfg,spectrum,det_type,regions,pdf_path,name):
             for key,region in regions.items():
 
                 eff= float(integrate_hist(hist,region[0],region[1]))
+                
                 effs[key][par]=eff/N
         else:
 
@@ -428,6 +431,7 @@ def sum_effs(eff1,eff2):
 
 def get_data_counts(spectrum,det_type,regions,file):
     """Get the counts in the data in a range"""
+
 
     if "{}/{}".format(spectrum,det_type) in file:
         hist =file["{}/{}".format(spectrum,det_type)]
