@@ -82,6 +82,7 @@ for data in datas:
         df2 =pd.DataFrame(utils.ttree2df(infile2,data))
         df2 = df2[df2['fit_range_orig'] != 0]
         dfs2[data]=df2
+        
         if idx==0:
             df2_tot = df2
         else:
@@ -112,7 +113,7 @@ for data,name in zip(datas,names):
             df2=df2_tot
             df2= df2.sort_values(by='comp_name')
             
-        
+      
         x,y,y_low,y_high=utils.get_from_df(df,"fit_range")
         norm = np.array(df["fit_range_orig"])
         x=x/norm
@@ -162,7 +163,7 @@ for data,name in zip(datas,names):
     else:
         utils.make_error_bar_plot(np.arange(len(labels)),labels,y,y_low,y_high,name,name_out,obj,y2,y_low2,y_high2,label1,label2,"",1)
         utils.make_error_bar_plot(indexs["U"],labels,y,y_low,y_high,name,name_out,obj,y2,y_low2,y_high2,label1,label2,"U",1)
-        utils.make_error_bar_plot(indexs["2nu"],labels,y,y_low,y_high,name,name_out,obj,y2,y_low2,y_high2,label1,label2,"2nu",1,low=3E5,upper=7E5,scale="linear")
+        utils.make_error_bar_plot(indexs["2nu"],labels,y,y_low,y_high,name,name_out,obj,y2,y_low2,y_high2,label1,label2,"2nu",1,low=3E5,upper=5E5,scale="linear")
 
         utils.make_error_bar_plot(indexs["Th"],labels,y,y_low,y_high,name,name_out,obj,y2,y_low2,y_high2,label1,label2,"Th",1)
         utils.make_error_bar_plot(indexs["K"],labels,y,y_low,y_high,name,name_out,obj,y2,y_low2,y_high2,label1,label2,"K",1)
