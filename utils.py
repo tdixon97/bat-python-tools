@@ -538,9 +538,8 @@ def get_livetime():
     meta = LegendMetadata()
 
     bad_runs=[("p04","r006"),("p07","r000")]
-    print(json.dumps(meta.dataprod.runinfo,indent=1))
+ 
 
-    print(meta.dataprod.runinfo.keys())
     taup=0
     vancouver=0
     for period in meta.dataprod.runinfo.keys():
@@ -563,3 +562,73 @@ def get_livetime():
 
     print("Taup livetime = {}".format(taup))
     print("Vancouver livetime = {}".format(vancouver))
+
+
+
+def get_det_types(det_type,string_sel=0,det_sel=None):
+    """Get a dictonary of detector types"""
+
+    meta = LegendMetadata()
+
+    if (det_type!="sum" and det_type!="str" and det_type!="chan" and det_type!="floor"):
+        det_types={"icpc": {"names":["icpc"],"types":["icpc"]},
+               "bege": {"names":["bege"],"types":["bege"]},
+               "ppc": {"names":["ppc"],"types":["ppc"]},
+               "coax": {"names":["coax"],"types":["coax"]}
+            }
+        namet="by_type"
+    elif (det_type=="sum"):
+        det_types={"all":{"names":["icpc","bege","ppc","coax"],"types":["icpc","bege","ppc","coax"]}}
+        namet="all"
+    
+    elif(det_type=="str"):
+        string_channels,string_types = get_channels_map()
+        det_types={}
+        for string in string_channels.keys():
+            det_types[string]={"names":[],"types":[]}
+
+            for dn,dt in zip(string_channels[string],string_types[string]):
+                
+                if (det_sel==None or det_sel==dt):
+                    det_types[string]["names"].append(dn)
+                    det_types[string]["types"].append(dt)
+
+        namet="string"
+
+    ## select by channel
+    elif (det_type=="chan"):
+        string_channels,string_types = get_channels_map()
+        det_types={}
+        namet="channels"
+        for string in string_channels.keys():
+
+            if (string_sel==0 or string_sel==string):
+                chans = string_channels[string]
+                types=string_types[string]
+
+                for chan,type in zip(chans,types):
+                    if (det_sel==None or type==det_sel):
+                        det_types[chan]={"names":[chan],"types":[type]}
+
+    ### select by floor
+    elif (det_type=="floor"):
+        string_channels,string_types = get_channels_map()
+        groups=["top","mid_top","mid","mid_bottom","bottom"]
+        det_types={}
+        namet="floor"
+        for group in groups:
+            det_types[group]={"names":[],"types":[]}
+        
+        for string in string_channels.keys():
+            channels = string_channels[string]
+            for i in range(len(channels)):
+                chan = channels[i]
+                name = number2name(meta,chan)
+                group = get_channel_floor(name)
+                if (string_sel==0 or string_sel==string):
+                    
+                    if (det_sel==None or string_types[string][i]==det_sel):
+                        det_types[group]["names"].append(chan)
+                        det_types[group]["types"].append(string_types[string][i])
+
+    return det_types,namet

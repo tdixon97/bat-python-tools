@@ -33,7 +33,7 @@ parser = argparse.ArgumentParser(description='A script with command-line argumen
 parser.add_argument('-d','--det_type', type=str, help='Detector type',default='icpc')
 parser.add_argument("-p","--pdf", type=str,help="Path to the PDFs")
 parser.add_argument("-a","--data", type=str,help="Path to the data")
-parser.add_argument('-e','--data_sel', type=str, help='Detector type',default='icpc')
+parser.add_argument('-e','--data_sel', type=str, help='Detector type',default=None)
 parser.add_argument('-S','--string_sel', type=int, help='string to select',default=0)
 parser.add_argument("-c","--cfg", type=str,help="Fit cfg file",default="../hmixfit/inputs/cfg/l200a-taup-silver-m1.json")
 parser.add_argument("-o","--out_file",type=str,help="file",default="../hmixfit/results/hmixfit-l200a_taup_silver_dataset_m1_norm-_mcmc.root")
@@ -54,57 +54,9 @@ first_index =utils.find_and_capture(outfile,"hmixfit-l200a_")
 fit_name = outfile[first_index:-10]
 det_sel=args.data_sel
 string_sel=args.string_sel
-
+print(det_sel)
 ### get a list of detector types to consider
-meta = LegendMetadata()
-
-if (det_type!="sum" and det_type!="str" and det_type!="chan" and det_type!="floor"):
-    det_types={"icpc": {"names":["icpc"],"types":["icpc"]},
-               "bege": {"names":["bege"],"types":["bege"]},
-               "ppc": {"names":["ppc"],"types":["ppc"]},
-               "coax": {"names":["coax"],"types":["coax"]}
-            }
-    namet="by_type"
-elif (det_type=="sum"):
-    det_types={"all":{"names":["icpc","bege","ppc","coax"],"types":["icpc","bege","ppc","coax"]}}
-    namet="all"
-elif(det_type=="str"):
-    string_channels,string_types = utils.get_channels_map()
-    det_types={}
-    for string in string_channels.keys():
-        det_types[string]={"names":string_channels[string],"types":string_types[string]}
-    namet="string"
-elif (det_type=="chan"):
-    string_channels,string_types = utils.get_channels_map()
-    det_types={}
-    namet="channels"
-    for string in string_channels.keys():
-        if (string_sel==0 or string_sel==string):
-            chans = string_channels[string]
-            types=string_types[string]
-
-            for chan,type in zip(chans,types):
-                det_types[chan]={"names":[chan],"types":[type]}
-
-elif (det_type=="floor"):
-    string_channels,string_types = utils.get_channels_map()
-    groups=["top","mid_top","mid","mid_bottom","bottom"]
-    det_types={}
-    namet="floor"
-    for group in groups:
-        det_types[group]={"names":[],"types":[]}
-    
-    for string in string_channels.keys():
-        channels = string_channels[string]
-        for i in range(len(channels)):
-            chan = channels[i]
-            name = utils.number2name(meta,chan)
-            group = utils.get_channel_floor(name)
-            
-            if (string_sel==0 or string_sel==string):
-                det_types[group]["names"].append(chan)
-                det_types[group]["types"].append(string_types[string][i])
-
+det_types,namet= utils.get_det_types(det_type,string_sel,det_sel)
 print(json.dumps(det_types,indent=1))
 
 with open(cfg_file,"r") as file:
