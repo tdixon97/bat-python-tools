@@ -92,7 +92,6 @@ for data in datas:
     idx=idx+1
 
 
-
 ### if scaling factor or parameter
 names=datas
 if obj=="scaling_factor" or obj=="parameter":
@@ -113,6 +112,7 @@ for data,name in zip(datas,names):
             df2=df2_tot
             df2= df2.sort_values(by='comp_name')
             
+        print(df)
       
         x,y,y_low,y_high=utils.get_from_df(df,"fit_range")
         norm = np.array(df["fit_range_orig"])
@@ -131,6 +131,8 @@ for data,name in zip(datas,names):
             y2*=scale
             y_low2*=scale
             y_high2*=scale
+        
+    
     else:
         if (obj!="scaling_factor"):
             df=dfs[data]
@@ -149,7 +151,9 @@ for data,name in zip(datas,names):
 
     ns=0
     labels=utils.format_latex(np.array(df["comp_name"]))
- 
+    if (do_comp):
+        labels2=utils.format_latex(np.array(df2["comp_name"]))
+    
     names=np.array(df["comp_name"])
     indexs=utils.get_index_by_type(names)
 
