@@ -54,10 +54,9 @@ first_index =utils.find_and_capture(outfile,"hmixfit-l200a_")
 fit_name = outfile[first_index:-10]
 det_sel=args.data_sel
 string_sel=args.string_sel
-print(det_sel)
+
 ### get a list of detector types to consider
 det_types,namet= utils.get_det_types(det_type,string_sel,det_sel)
-print(json.dumps(det_types,indent=1))
 
 with open(cfg_file,"r") as file:
     cfg =json.load(file)
@@ -79,7 +78,6 @@ for det_name, det_info in det_types.items():
 
     for det,named in zip(det_list,det_info["types"]):
         eff_new,good = utils.get_efficiencies(cfg,spectrum,det,regions,pdf_path,named,"mul_surv")
-        print(named)
         if (good==1 and (named==det_sel or det_sel=="all")):
             effs=utils.sum_effs(effs,eff_new)
 
