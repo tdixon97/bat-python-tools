@@ -64,7 +64,8 @@
       "K40_front_end_electronics",
       "K40_hpge_support_copper",
       "K40_pen_plates",
-      "K40_wls_reflector"
+	"K40_wls_reflector",
+	"K40_birds_nest"
     ],
     "style": {
       "color": "#CC3311",
