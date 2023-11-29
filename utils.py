@@ -4,7 +4,7 @@ import uproot
 import copy
 from legend_plot_style import LEGENDPlotStyle as lps
 from datetime import datetime, timezone
-
+from scipy.stats import poisson
 lps.use('legend')
 import matplotlib.pyplot as plt
 import numpy as np
@@ -12,6 +12,8 @@ import tol_colors as tc
 import json
 from legendmeta import LegendMetadata
 import warnings
+from iminuit import Minuit, cost
+
 
 def find_and_capture(text:str, pattern:str):
     """Function to  find the start index of a pattern in a string
@@ -352,12 +354,31 @@ def integrate_hist(hist,low,high):
 
     return np.sum(bin_contents_range)
 
+def get_total_efficiency(det_types,cfg,spectrum,regions,pdf_path,det_sel="all"):
+    eff_total={}
+    ### creat the efficiency maps (per dataset)
+    for det_name, det_info in det_types.items():
+        
+        det_list=det_info["names"]
+        effs={}
+        for key in regions:
+            effs[key]={}
 
+        for det,named in zip(det_list,det_info["types"]):
+            eff_new,good = get_efficiencies(cfg,spectrum,det,regions,pdf_path,named,"mul_surv")
+            if (good==1 and (named==det_sel or det_sel=="all")):
+                effs=sum_effs(effs,eff_new)
+
+        eff_total[det_name]=effs
+
+    return eff_total
 def get_efficiencies(cfg,spectrum,det_type,regions,pdf_path,name,spectrum_fit=""):
     """ Get the efficiencies"""
 
-    effs={"full":{},"2nu":{},"K40":{},"K42":{},"Tl compton":{},"Tl peak":{}}
-
+    effs={}
+    for key in regions:
+        effs[key]={}
+  
     if (spectrum_fit==""):
         spectrum_fit=spectrum
 
@@ -428,6 +449,142 @@ def sum_effs(eff1,eff2):
             dict_sum[key]= eff1.get(key, 0) + eff2.get(key, 0)
     return dict_sum
 
+def get_data_counts_total(spectrum,det_types,regions,file,det_sel="all",
+                          key_list=["full","2nu","Tlcompton","Tlpeak","K40","K42"]):
+
+    data_counts_total ={}
+    for det_name,det_info in det_types.items():
+
+        det_list=det_info["names"]
+        dt=det_info["types"]
+        data_counts={}
+        for key in key_list:
+            data_counts[key]=0 
+        for det,type in zip(det_list,dt):
+            if (type==det_sel or det_sel=="all"):
+                data_counts = sum_effs(data_counts,get_data_counts(spectrum,det,regions,file))
+
+        data_counts_total[det_name]=data_counts
+
+    return data_counts_total
+
+
+def create_efficiency_likelihood(data_surv,data_cut):
+    """Create the likelihood function"""
+
+    def likelihood(Ns,Nb,eff_s,eff_b):
+        """The likelihood function"""
+
+        logL=0
+        preds_surv =np.array([Nb*eff_b,Nb*eff_b+Ns*eff_s,Nb*eff_b])
+        preds_cut =np.array([Nb*(1-eff_b),Nb*(1-eff_b)+Ns*(1-eff_s),Nb*(1-eff_b)])
+
+        logL+=sum(poisson.logpmf(data_surv, preds_surv))
+        logL+=sum(poisson.logpmf(data_cut, preds_cut))
+       
+        return -logL
+    return likelihood
+
+
+def create_counting_likelihood(data):
+    """Create the likelihood function"""
+
+    def likelihood(Ns,Nb):
+        """The likelihood function"""
+
+        logL=0
+        preds_surv =np.array([Nb,Nb+Ns,Nb])
+      
+
+        logL+=sum(poisson.logpmf(data, preds_surv))
+       
+        return -logL
+    return likelihood
+def plot_eff_calc(energies,data_surv,data_cut,values):
+    """ Make a plot to show the efficiency calculation"""
+    
+    vset = tc.tol_cset('vibrant')
+    Nb=values["Nb"]
+    Ns=values["Ns"]
+    eff_s=values["eff_s"]
+    eff_b =values["eff_b"]
+    bkg= np.array([Nb*eff_b,Nb*eff_b,Nb*eff_b,Nb*eff_b])
+    sig= np.array([0,Ns*eff_s,0])
+   
+    bkg_cut= np.array([Nb*(1-eff_b),Nb*(1-eff_b),Nb*(1-eff_b),Nb*(1-eff_b)])
+    sig_cut= np.array([0,Ns*(1-eff_s),0])
+    
+    fig, axes = lps.subplots(2, 1, figsize=(4,4), sharex=True, gridspec_kw = {'hspace': 0})
+    centers=[(energies[i] + energies[i + 1]) / 2 for i in range(len(energies) - 1)]
+  
+    axes[0].bar(centers, data_surv, width=np.diff(energies), edgecolor=vset.blue, align='center',color=vset.blue,alpha=0.3,linewidth=0,label="Data")
+    axes[0].step(energies,bkg, where="mid",color=vset.red,alpha=1,linewidth=1,label="Bkg.")
+    axes[0].step(centers,sig, where="mid",color=vset.teal,alpha=1,linewidth=1,label="Sig")
+
+    axes[0].legend(loc="best")
+    axes[1].bar(centers, data_cut, width=np.diff(energies), edgecolor=vset.blue, align='center',color=vset.blue,alpha=0.3,linewidth=0)
+    axes[1].step(energies,bkg_cut, where="mid",color=vset.red,alpha=1,linewidth=1)
+    axes[1].step(centers,sig_cut, where="mid",color=vset.teal,alpha=1,linewidth=1)
+   
+    axes[1].set_xlim(energies[0],energies[-1])
+    axes[0].set_xlim(energies[0],energies[-1])
+
+    axes[0].set_xlabel("Energy [keV]")
+    axes[0].set_ylabel("Counts/bin")
+
+    axes[1].set_xlabel("Energy [keV]")
+
+    axes[1].set_ylabel("Counts/bin")
+    axes[0].set_ylabel("Counts/bin")
+
+    axes[1].xaxis.set_tick_params(top=False)
+  
+    axes[0].set_title("Events passing LAr (top) and cut (bottom) for {} keV".format(centers[1]),fontsize=8)
+    plt.tight_layout()
+    plt.savefig("plots/lar/eff_calc_{}.pdf".format(centers[1]))
+
+
+
+def get_counts_minuit(counts,energies):
+    cost = create_counting_likelihood(counts)
+    Ns_guess = counts[1]
+
+    Nb_guess=counts[0]
+    guess=(Ns_guess,Nb_guess)
+    m = Minuit(cost, *guess)
+    m.limits[1]=(0,1.5*Nb_guess+10)
+    m.limits[0]=(0,2*Ns_guess+10)
+
+    m.migrad()
+    m.minos()
+    elow=abs(m.merrors["Ns"].lower)
+    ehigh=abs(m.merrors["Ns"].upper)
+
+    return m.values["Ns"],elow,ehigh
+
+def get_eff_minuit(counts_total,counts_after,energies):
+    """ Get the efficiency with Minuit the likelihood is just a binned one"""
+
+    cost = create_efficiency_likelihood(counts_after,counts_total-counts_after)
+    Ns_guess = counts_total[1]
+    Nb_guess= counts_total[0]
+
+    eff_s = counts_after[1]/counts_total[1]
+
+    eff_b=counts_after[0]/counts_total[0]
+    guess=(Ns_guess,Nb_guess,eff_s,eff_b)
+    m = Minuit(cost, *guess)
+    m.limits[1]=(0,1.5*Nb_guess+10)
+    m.limits[0]=(0,2*Ns_guess+10)
+    m.limits[2]=(0,1)
+    m.limits[3]=(0,1)
+
+    m.migrad()
+    m.minos()
+    elow=abs(m.merrors["eff_s"].lower)
+    ehigh=abs(m.merrors["eff_s"].upper)
+    plot_eff_calc(energies,counts_after,counts_total-counts_after,m.values)   
+    return m.values["eff_s"],elow,ehigh
 
 def get_data_counts(spectrum,det_type,regions,file):
     """Get the counts in the data in a range"""
