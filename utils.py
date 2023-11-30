@@ -18,6 +18,7 @@ from iminuit import Minuit, cost
 from scipy.stats import expon
 from scipy.stats import truncnorm
 from matplotlib.backends.backend_pdf import PdfPages
+from numba import jit
 
 def find_and_capture(text:str, pattern:str):
     """Function to  find the start index of a pattern in a string
@@ -504,6 +505,9 @@ def create_counting_likelihood(data):
        
         return -logL
     return likelihood
+
+
+
 def plot_eff_calc(energies,data_surv,data_cut,values):
     """ Make a plot to show the efficiency calculation"""
     
@@ -578,17 +582,47 @@ def extract_prior(prior:str):
         raise ValueError("Only supported priors are gaus and exp currently")
     
     return rv,high
-def plot_mc_no_save(axes,pdf,name=""):
+
+
+
+def plot_mc_no_save(axes,pdf,name="",linewidth=0.6):
     
     axes.set_xlabel("Energy [keV]")
     axes.set_ylabel("counts/10 keV")
 
     axes.set_yscale("log")
     axes.set_xlim(0,4000)
-    pdf.plot(ax=axes, linewidth=0.8, yerr=False,flow= None,histtype="step",label=name)
+    pdf.plot(ax=axes, linewidth=linewidth, yerr=False,flow= None,histtype="step",label=name)
+    #pdf.plot(ax=axes, linewidth=0.8, yerr=False,flow= None,histtype="fill",alpha=0.15)
+
     return axes
 
-def plot_mc(pdf,name,save_pdf):
+def compare_mc(max_energy,pdfs,decay,order,norm_peak,pdf,xlow,xhigh,scale,linewidth=0.6):
+    fig, axes = lps.subplots(1, 1,figsize=(6, 4), sharex=True, gridspec_kw = { "hspace":0})
+    max_c=0
+    axes.set_xlim(xlow,xhigh)
+
+    for name in order:
+ 
+        Peak_counts =pdfs[decay+"_"+name][norm_peak]
+
+        pdf_norm = scale_hist(pdfs[decay+"_"+name],1/Peak_counts)
+
+        if (pdf_norm[max_energy]>max_c):
+            max_c= pdf_norm[max_energy]
+ 
+        axes=plot_mc_no_save(axes,pdf_norm,name=name,linewidth=linewidth)
+        
+    axes.legend(loc='best',edgecolor="black",frameon=True, facecolor='white',framealpha=1,fontsize=8)    
+    axes.set_xlim(xlow,xhigh)
+    axes.set_yscale(scale)
+    if (scale!="log"):
+        axes.set_ylim(0,1.1*max_c)
+ 
+    
+    pdf.savefig()
+    
+def plot_mc(pdf,name,save_pdf,data=None,range_x=(500,4000),range_y=(0.01,5000),pdf2=None):
     vset = tc.tol_cset('vibrant')
 
     fig, axes = lps.subplots(1, 1,figsize=(5, 4), sharex=True, gridspec_kw = { "hspace":0})
@@ -596,11 +630,72 @@ def plot_mc(pdf,name,save_pdf):
     axes.set_ylabel("counts/10 keV")
     axes.set_title(name)
     axes.set_yscale("log")
-    axes.set_xlim(0,4000)
-    pdf.plot(ax=axes, linewidth=0.8,color=vset.teal, yerr=False,flow= None,histtype="step")
+    axes.set_xlim(range_x)
+    axes.set_ylim(range_y)
+    if (data is not None):
+        data.plot(ax=axes,yerr=False,flow=None,histtype="fill",alpha=0.3,label="Data",color=vset.blue)
+    pdf.plot(ax=axes, linewidth=1,color=vset.red, yerr=False,flow= None,histtype="step",label="Best fit from screening")
+    if (pdf2 is not None):
+        pdf2.plot(ax=axes, linewidth=1,color=vset.red,alpha=0.6, yerr=False,flow= None,histtype="step",label="90 pct upper limit")
+
+    axes.legend(loc='best',edgecolor="black",frameon=True, facecolor='white',framealpha=1)    
+
     save_pdf.savefig()
 
     plt.close()
+
+def vals2hist(vals,hist):
+    for i in range(hist.size - 2):
+        hist[i]=vals[i]
+    return hist
+
+def slow_convolve(priors,pdfs,rvs,n_samp=10000):
+    """
+    
+    """
+    ### get the number of bins and components
+
+    n_bins=0
+    n_comp=0
+    for comp in priors["components"]:
+    
+        vals=np.array(pdfs[comp["name"]].values())
+        n_bins=len(vals)
+        n_comp+=1
+
+
+    output = np.zeros((n_bins,n_samp))
+
+    for i in range(n_samp):
+   
+        h_tot = np.zeros(n_bins)
+        for comp in priors["components"]:
+            rv=rvs[comp["name"]]
+
+            a = rv.rvs(1)
+           
+            a=np.array(a)
+            h_tot+=np.array(pdfs[comp["name"]].values())*a[0]
+
+        output[:,i]=h_tot
+      
+
+    return output
+
+
+
+
+
+def fast_convolve():
+
+
+    ### create the data array
+
+    S= np.ones((1000,10,10000))
+    #S[:,0,0]=np.linspace(0,1000,1000)
+    print(S)
+    
+    
 
 def plot_pdf(rv,high,samples=np.array([]),pdf_obj=None,name=""):
     """ Plot the PDF and optionally some samples"""
@@ -635,6 +730,21 @@ def scale_hist(hist,scale):
     return hist_scale
 def get_hist(obj,range=(132,4195),bins=10):
     return obj.to_hist()[range[0]:range[1]][hist.rebin(bins)]
+
+
+def get_data(path,spectrum="mul_surv",det_type="all",r=(0,4000),b=10):
+    """Get the histogram (PDF) and the number of simulated primaries (with uproot)"""
+
+    file = uproot.open(path)
+        
+    if "{}/{}".format(spectrum,det_type) in file:
+        hist = file["{}/{}".format(spectrum,det_type)]
+        hist = get_hist(hist,range=r,bins=b)
+        
+    else:
+        raise ValueError("Error: {}/{} not in {}".format(spectrum,det_type,path))
+    return hist
+
 
 def get_pdf_and_norm(path,spectrum="mul_surv",det_type="all",r=(0,4000),b=10):
     """Get the histogram (PDF) and the number of simulated primaries (with uproot)"""
