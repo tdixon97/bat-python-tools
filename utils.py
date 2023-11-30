@@ -2,6 +2,8 @@ import re
 import pandas as pd
 import uproot
 import copy
+import hist
+
 from legend_plot_style import LEGENDPlotStyle as lps
 from datetime import datetime, timezone
 from scipy.stats import poisson
@@ -576,6 +578,29 @@ def extract_prior(prior:str):
         raise ValueError("Only supported priors are gaus and exp currently")
     
     return rv,high
+def plot_mc_no_save(axes,pdf,name=""):
+    
+    axes.set_xlabel("Energy [keV]")
+    axes.set_ylabel("counts/10 keV")
+
+    axes.set_yscale("log")
+    axes.set_xlim(0,4000)
+    pdf.plot(ax=axes, linewidth=0.8, yerr=False,flow= None,histtype="step",label=name)
+    return axes
+
+def plot_mc(pdf,name,save_pdf):
+    vset = tc.tol_cset('vibrant')
+
+    fig, axes = lps.subplots(1, 1,figsize=(5, 4), sharex=True, gridspec_kw = { "hspace":0})
+    axes.set_xlabel("Energy [keV]")
+    axes.set_ylabel("counts/10 keV")
+    axes.set_title(name)
+    axes.set_yscale("log")
+    axes.set_xlim(0,4000)
+    pdf.plot(ax=axes, linewidth=0.8,color=vset.teal, yerr=False,flow= None,histtype="step")
+    save_pdf.savefig()
+
+    plt.close()
 
 def plot_pdf(rv,high,samples=np.array([]),pdf_obj=None,name=""):
     """ Plot the PDF and optionally some samples"""
@@ -597,6 +622,33 @@ def plot_pdf(rv,high,samples=np.array([]),pdf_obj=None,name=""):
     axes.set_title(name)
     if (pdf_obj is not None):
         pdf_obj.savefig()
+
+    plt.close()
+
+def scale_hist(hist,scale):
+    """Scale a hist object"""
+    hist_scale=copy.deepcopy(hist)
+    for i in range(hist.size - 2):
+               
+        hist_scale[i]*=scale
+
+    return hist_scale
+def get_hist(obj,range=(132,4195),bins=10):
+    return obj.to_hist()[range[0]:range[1]][hist.rebin(bins)]
+
+def get_pdf_and_norm(path,spectrum="mul_surv",det_type="all",r=(0,4000),b=10):
+    """Get the histogram (PDF) and the number of simulated primaries (with uproot)"""
+
+    file = uproot.open(path)
+        
+    if "{}/{}".format(spectrum,det_type) in file:
+        hist = file["{}/{}".format(spectrum,det_type)]
+        hist = get_hist(hist,range=r,bins=b)
+        N  = int(file["number_of_primaries"])
+        
+    else:
+        raise ValueError("Error: {}/{} not in {}".format(spectrum,det_type,path))
+    return hist,N
 
 def get_counts_minuit(counts,energies):
     cost = create_counting_likelihood(counts)
