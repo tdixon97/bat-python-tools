@@ -67,14 +67,14 @@
          },
          {
             "name" : "Bi212Tl208_hpge_insulators",
-            "file" : "l200a-hpge_insulators-Ra224-to-Pb208-tier_pdf.root",
+            "file" : "l200a-hpge-insulators-Ra224-to-Pb208-tier_pdf.root",
             "best_fit": 660,
             "prior": "gaus:1,660,220" ,
             "type":"hpge"       
          },
          {
             "name" : "Pb214Bi214_cables",
-            "file" : "l200a-hv-signal-cables-Rn222-to-Po214-tier_pdf.root",
+            "file" : "l200a-hv-signal-cables-Rn222-to-Pb214-tier_pdf.root",
             "best_fit": 1.28E4,
             "prior": "gaus:1,1.28E4,1.06E4",
             "type":"icpms"        
@@ -122,7 +122,7 @@
             "type":"icpms"      
          },
          {
-            "name" : "Pb214B14_wls_reflector",
+            "name" : "Pb214Bi214_wls_reflector",
             "file" : "l200a-wls-reflector-Rn222-to-Po214-tier_pdf.root",
             "best_fit": 2.4E5,
             "prior": "gaus:1,2.4E5,0.8E5",
@@ -137,7 +137,7 @@
          },
          {
             "name" : "Pb214Bi214_hpge_insulators",
-            "file" : "l200a-hpge_insulators-Rn222-to-Po214-tier_pdf.root",
+            "file" : "l200a-hpge-insulators-Rn222-to-Po214-tier_pdf.root",
             "best_fit": 705,
             "prior": "gaus:1,705,130",
             "type":"hpge"        
