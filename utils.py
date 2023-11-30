@@ -13,7 +13,8 @@ import json
 from legendmeta import LegendMetadata
 import warnings
 from iminuit import Minuit, cost
-
+from scipy.stats import expon
+from scipy.stats import truncnorm
 
 def find_and_capture(text:str, pattern:str):
     """Function to  find the start index of a pattern in a string
@@ -543,6 +544,33 @@ def plot_eff_calc(energies,data_surv,data_cut,values):
     plt.tight_layout()
     plt.savefig("plots/lar/eff_calc_{}.pdf".format(centers[1]))
 
+
+def extract_prior(prior:str):
+    """
+    Extracts the prior as a sccipy object (only works for Gauss or Expon)
+    
+    """
+
+    #gaussian prior
+    rv=None
+    if ("gaus" in prior):
+        split_values = prior.split(":")
+
+        param1, param2, param3 = map(int, split_values[1].split(","))
+        rv = truncnorm(0,5*param3, loc=param2, scale=param3)
+    elif ("exp" in prior):
+        split_parts = prior.split("/")
+
+        # Extract the upper limit from the exponenital
+        if len(split_parts) > 1:
+            upper_limit = split_parts[1][:-1]
+            rv= expon(scale=upper_limit/2.3)
+        else:
+            raise ValueError("exp prior doesnt contain the part /UpperLimit) needed")
+    else:
+        raise ValueError("Only supported priors are gaus and exp currently")
+    
+    return rv
 
 
 def get_counts_minuit(counts,energies):
