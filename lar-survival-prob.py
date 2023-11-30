@@ -54,8 +54,7 @@ left_sideband ={name_peak:(peak-15,peak-5)}
 right_sideband ={name_peak:(peak+5,peak+15)}
 
 det_types,name = utils.get_det_types("sum")
-print(json.dumps(det_types,indent=1))
-print(name)
+
 
 energies= np.array([left_sideband[name_peak][0],left_sideband[name_peak][1],
                     regions[name_peak][1],right_sideband[name_peak][1]])
@@ -70,7 +69,6 @@ data_counts_lar_left = utils.get_data_counts_total("mul_lar_surv",det_types,left
 
 
 ### the efficiency calculation
-print(data_counts)
 eff,eff_low,eff_high=utils.get_eff_minuit(np.array([data_counts_left["all"][name_peak],data_counts["all"][name_peak],data_counts_right["all"][name_peak]]),
                      np.array([data_counts_lar_left["all"][name_peak],data_counts_lar["all"][name_peak],data_counts_lar_right["all"][name_peak]]),
                    energies
@@ -78,7 +76,6 @@ eff,eff_low,eff_high=utils.get_eff_minuit(np.array([data_counts_left["all"][name
 eff*=100
 eff_low*=100
 eff_high*=100
-print("eff from MINUIT",eff,eff_low,eff_high)
 
 ### now we have data efficiency get some for MC
 effs  = utils.get_total_efficiency(det_types,cfg,"mul_surv",regions,pdf_path)
@@ -110,8 +107,6 @@ for key in sorted(effs["all"][name_peak].keys()):
 
             names.append(key[3:])
 
-print(eff_list)
-print(names)
 
 fig, axes = lps.subplots(1, 1,figsize=(5, 4), sharex=True, gridspec_kw = { "hspace":0})
 
