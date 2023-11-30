@@ -15,6 +15,7 @@ import warnings
 from iminuit import Minuit, cost
 from scipy.stats import expon
 from scipy.stats import truncnorm
+from matplotlib.backends.backend_pdf import PdfPages
 
 def find_and_capture(text:str, pattern:str):
     """Function to  find the start index of a pattern in a string
@@ -556,22 +557,46 @@ def extract_prior(prior:str):
     if ("gaus" in prior):
         split_values = prior.split(":")
 
-        param1, param2, param3 = map(int, split_values[1].split(","))
-        rv = truncnorm(0,5*param3, loc=param2, scale=param3)
+        param1, param2, param3 = map(float, split_values[1].split(","))
+        a=-param2/param3
+
+        rv = truncnorm(a=a,b=5, loc=param2, scale=param3)
+        high=param2+5*param3
     elif ("exp" in prior):
         split_parts = prior.split("/")
 
         # Extract the upper limit from the exponenital
         if len(split_parts) > 1:
-            upper_limit = split_parts[1][:-1]
+            upper_limit = float( split_parts[1][:-1])
             rv= expon(scale=upper_limit/2.3)
+            high = 2*upper_limit
         else:
             raise ValueError("exp prior doesnt contain the part /UpperLimit) needed")
     else:
         raise ValueError("Only supported priors are gaus and exp currently")
     
-    return rv
+    return rv,high
 
+def plot_pdf(rv,high,samples=np.array([]),pdf_obj=None,name=""):
+    """ Plot the PDF and optionally some samples"""
+    vset = tc.tol_cset('vibrant')
+
+    fig, axes = lps.subplots(1, 1,figsize=(5, 4), sharex=True, gridspec_kw = { "hspace":0})
+
+    x=np.linspace(0,high,10000)
+
+    pdf = rv.pdf(x)
+    axes.plot(x,pdf,color=vset.red,label="prior distribution")
+
+    if (len(samples)>0):
+        axes.hist(samples,range=(0,high),bins=100,label="Samples",density=True,color=vset.blue,alpha=0.4)
+    axes.set_xlabel("decays/yr")
+    axes.legend(loc="best")
+    axes.set_ylabel("Probability Density ")
+    axes.set_xlim(0,high)
+    axes.set_title(name)
+    if (pdf_obj is not None):
+        pdf_obj.savefig()
 
 def get_counts_minuit(counts,energies):
     cost = create_counting_likelihood(counts)
