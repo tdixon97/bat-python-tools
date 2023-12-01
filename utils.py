@@ -237,8 +237,10 @@ def plot_corr(df,i,j,labels,save):
     
 
 
-def make_error_bar_plot(indexs,labels:list,y:np.ndarray,ylow:np.ndarray,yhigh:np.ndarray,data,name_out,obj,
-                        y2=None,ylow2=None,yhigh2=None,label1=None,label2=None,extra=None,do_comp=0,low=0.1,scale="log",upper=0):
+def make_error_bar_plot(indexs,labels:list,y:np.ndarray,ylow:np.ndarray,yhigh:np.ndarray,data="all",name_out=None,obj="parameter",
+                        y2=None,ylow2=None,yhigh2=None,label1=None,label2=None,extra=None,do_comp=0,low=0.1,scale="log",upper=0,
+                        save_path ="plots/fit_results/fit_results",show=False,pdf=None,data_band =None,categories=None
+                        ):
     """
     Make the error bar plot
     """
@@ -260,14 +262,41 @@ def make_error_bar_plot(indexs,labels:list,y:np.ndarray,ylow:np.ndarray,yhigh:np
     fig, axes = lps.subplots(1, 1, figsize=(8, height), sharex=True, gridspec_kw = {'hspace': 0})
 
     xin=np.arange(len(labels))
-    
-    if (do_comp==False):
-        axes.errorbar(y=xin+0.15*len(y)/30,x=y,xerr=[ylow,yhigh],fmt="o",color=vset.blue,ecolor=vset.cyan,markersize=1)
+
+    ### either split by category or not
+    if categories is None:
+        if (do_comp==False):
+            axes.errorbar(y=xin+0.15*len(y)/30,x=y,xerr=[ylow,yhigh],fmt="o",color=vset.blue,ecolor=vset.cyan,markersize=1,label="MC")
+        else:
+            axes.errorbar(y=xin+0.15*len(y)/30,x=y,xerr=[ylow,yhigh],fmt="o",color=vset.blue,ecolor=vset.cyan,markersize=1,
+                        label=label1)
+            axes.errorbar(y=xin-0.15*len(y2)/30,x=y2,xerr=[ylow2,yhigh2],fmt="o",color=vset.red,ecolor=vset.orange,markersize=1,
+                        label=label2)
     else:
-        axes.errorbar(y=xin+0.15*len(y)/30,x=y,xerr=[ylow,yhigh],fmt="o",color=vset.blue,ecolor=vset.cyan,markersize=1,
-                      label=label1)
-        axes.errorbar(y=xin-0.15*len(y2)/30,x=y2,xerr=[ylow2,yhigh2],fmt="o",color=vset.red,ecolor=vset.orange,markersize=1,
-                      label=label2)
+        if (do_comp==True):
+            raise ValueError("Splitting by category not implemented for comparison")
+        
+        cat_sort=np.argsort(categories)
+       
+        labels=labels[cat_sort]
+        categories=categories[cat_sort]
+        y=y[cat_sort]
+        ylow=ylow[cat_sort]
+        yhigh=yhigh[cat_sort]
+        colors=[vset.blue,vset.teal,vset.magenta,vset.cyan]
+        for cat,col in zip(sorted(set(categories)),colors):
+            y_tmp = y[categories==cat]
+            ylow_tmp = ylow[categories==cat]
+            yhigh_tmp = yhigh[categories==cat]
+            xin_tmp = xin[categories==cat]
+            axes.errorbar(y=xin_tmp,x=y_tmp,xerr=[ylow_tmp,yhigh_tmp],fmt="o",color=col,ecolor=col,markersize=1,label=cat)
+
+
+    ### add a band of the data           
+    if data_band is not None:
+        axes.axvline(x=data_band[0], color='red', linestyle='--', label='Data')
+
+        axes.axvspan(xmin=data_band[0]-data_band[1],xmax=data_band[0]+data_band[2], color=vset.orange, alpha=0.3)
 
     if (upper==0):
         upper = np.max(y+1.5*yhigh)
@@ -276,6 +305,8 @@ def make_error_bar_plot(indexs,labels:list,y:np.ndarray,ylow:np.ndarray,yhigh:np
             upper=upper*5
     axes.set_yticks(xin, labels)
 
+    if (data_band is not None):
+        upper =data_band[0]+7*data_band[2]
     if (obj=="fit_range"):
         axes.set_xlabel("Oberved counts / yr in {} data".format(data))
         axes.set_xlim(0.1,upper)
@@ -291,21 +322,98 @@ def make_error_bar_plot(indexs,labels:list,y:np.ndarray,ylow:np.ndarray,yhigh:np
         axes.set_xlim(low,upper)
  
     axes.set_yticks(axes.get_yticks())
-    
     axes.set_yticklabels([val for val in labels], fontsize=8)
     axes.set_xscale(scale)
+
     plt.grid()
-    leg=axes.legend(loc='best',edgecolor="black",frameon=True, facecolor='white',framealpha=1)
-    leg.set_zorder(10)    
+    if (do_comp==True or data_band is not None or categories is not None):
+        leg=axes.legend(loc='upper right',edgecolor="black",frameon=True, facecolor='white',framealpha=1)
+        leg.set_zorder(10)    
 
     #plt.show()
     if (do_comp==True):
         name_out="comp_{}_to_{}_{}".format(label1,label2,extra)
-    if (obj!="scaling_factor"):     
-        plt.savefig("plots/fit_results/fit_results_{}_{}_{}.pdf".format(data,obj,name_out))
     else:
-        plt.savefig("plots/fit_results/fit_results_{}_{}.pdf".format(obj,name_out))
+        name_out =" "
 
+    if (pdf is None):
+        if (obj!="scaling_factor"):     
+            plt.savefig("{}_{}_{}_{}.pdf".format(save_path,data,obj,name_out))
+        else:
+            plt.savefig("{}_{}_{}.pdf".format(save_path,obj,name_out))
+    else:
+        pdf.savefig()
+
+    if (show==True):
+        plt.show()
+    else:
+        plt.close()
+
+def replace_e_notation(my_string):
+    # Using regular expression to match e+0n where n is any character
+    pattern = re.compile(r'e\+0(.)')
+    modified_string = re.sub(pattern, r'\\cdot 10^{\1}', my_string)
+    return modified_string
+
+
+def priors2table(priors:dict):
+    """ Convert the priors json into a latex table"""
+    print(json.dumps(priors,indent=1))
+
+    convert_fact=1/31.5
+    print("\multicolumn{1}{c}{\cellcolor[HTML]{CBCEFB}\\textbf{Source} &\multicolumn{1}{c}{\cellcolor[HTML]{CBCEFB} \\textbf{} Decay} & \multicolumn{1}{c}{\cellcolor[HTML]{CBCEFB} \\textbf{Activity [$\mu$Bq]} & \multicolumn{1}{c}{\cellcolor[HTML]{CBCEFB}\\textbf{Type} \\\\ \hline \hline ")
+    first_Bi=0
+    first_Tl=0
+    for comp in priors["components"]:
+
+        source = comp["full-name"]
+        if ("Bi212Tl208" in comp["name"] and first_Tl==0):
+            decay = "$^{212}$Bi+$^{208}$Tl"
+            first_Tl=1
+        elif ("Pb214Bi214" in comp["name"] and first_Bi==0):
+            decay = "$^{214}$Pb+$^{214}$Bi"
+            first_Bi=1
+        else:
+            decay= ""
+        type_meas = comp["type"]
+        if (type_meas=="icpms"):
+            type_meas="ICP-MS"
+        if (type_meas=="guess"):
+            type_meas="Guess"
+        if (type_meas=="hpge"):
+            type_meas="HPGe"
+        prior = comp["prior"]
+        if ("gaus" in prior):
+            split_values = prior.split(":")
+
+            param1, param2, param3 = map(float, split_values[1].split(","))
+            a=-param2/param3
+
+            rv = truncnorm(a=a,b=5, loc=param2, scale=param3)
+            high=param2+5*param3
+            low_err = 0 if param3 > param2 else param2-param3
+            high_err= param3+param2
+            best=param2
+            low_err*=convert_fact
+            high_err=convert_fact*param3
+            best*=convert_fact
+            meas = "${:.2g} \pm{:.2g}$".format(best,high_err)
+            meas = replace_e_notation(meas)
+        elif ("exp" in prior):
+            split_parts = prior.split("/")
+
+            # Extract the upper limit from the exponenital
+            if len(split_parts) > 1:
+                upper_limit = float( split_parts[1][:-1])
+                rv= expon(scale=upper_limit/2.3)
+                high = 2*upper_limit
+                low_err=0
+                high_err= upper_limit
+                high_err*=convert_fact
+                meas="$<{:.2g}$".format(high_err)
+                meas = replace_e_notation(meas)
+
+        print("{} & {} & {} & {} \\\\".format(source,decay,meas,type_meas))
 
 def get_index_by_type(names):
     """ Get the index for each type (U,Th,K)"""
@@ -359,7 +467,7 @@ def integrate_hist(hist,low,high):
 
     return np.sum(bin_contents_range)
 
-def get_total_efficiency(det_types,cfg,spectrum,regions,pdf_path,det_sel="all"):
+def get_total_efficiency(det_types,cfg,spectrum,regions,pdf_path,det_sel="all",mc_list=None):
     eff_total={}
     ### creat the efficiency maps (per dataset)
     for det_name, det_info in det_types.items():
@@ -370,14 +478,16 @@ def get_total_efficiency(det_types,cfg,spectrum,regions,pdf_path,det_sel="all"):
             effs[key]={}
 
         for det,named in zip(det_list,det_info["types"]):
-            eff_new,good = get_efficiencies(cfg,spectrum,det,regions,pdf_path,named,"mul_surv")
+            eff_new,good = get_efficiencies(cfg,spectrum,det,regions,pdf_path,named,"mul_surv",mc_list=mc_list)
             if (good==1 and (named==det_sel or det_sel=="all")):
                 effs=sum_effs(effs,eff_new)
 
         eff_total[det_name]=effs
 
     return eff_total
-def get_efficiencies(cfg,spectrum,det_type,regions,pdf_path,name,spectrum_fit=""):
+
+
+def get_efficiencies(cfg,spectrum,det_type,regions,pdf_path,name,spectrum_fit="",mc_list=None):
     """ Get the efficiencies"""
 
     effs={}
@@ -387,29 +497,36 @@ def get_efficiencies(cfg,spectrum,det_type,regions,pdf_path,name,spectrum_fit=""
     if (spectrum_fit==""):
         spectrum_fit=spectrum
 
-    for key,region in regions.items():
-        effs[key]["2vbb_bege"]=0
-        effs[key]["2vbb_coax"]=0
-        effs[key]["2vbb_ppc"]=0
-        effs[key]["2vbb_icpc"]=0
+    if mc_list is None:
+        for key,region in regions.items():
+            effs[key]["2vbb_bege"]=0
+            effs[key]["2vbb_coax"]=0
+            effs[key]["2vbb_ppc"]=0
+            effs[key]["2vbb_icpc"]=0
 
-    for key in cfg["fit"]["theoretical-expectations"].keys():
-        if ".root" in key:
-            filename = key
+        for key in cfg["fit"]["theoretical-expectations"].keys():
+            if ".root" in key:
+                filename = key
 
-    if "{}/{}".format(spectrum_fit,"icpc") in cfg["fit"]["theoretical-expectations"][filename]:
-    
-        icpc_comp_list=cfg["fit"]["theoretical-expectations"][filename]["{}/{}".format(spectrum_fit,name)]["components"]
+        if "{}/{}".format(spectrum_fit,"icpc") in cfg["fit"]["theoretical-expectations"][filename]:
+        
+            icpc_comp_list=cfg["fit"]["theoretical-expectations"][filename]["{}/{}".format(spectrum_fit,name)]["components"]
+        else:
+            warnings.warn("{}/{} not in MC PDFs".format(spectrum_fit,det_type))
+            return effs,0
     else:
-        warnings.warn("{}/{} not in MC PDFs".format(spectrum_fit,det_type))
-        return effs,0
+
+        icpc_comp_list=mc_list
+
+
     comp_list = copy.deepcopy(icpc_comp_list)
     
     for comp in comp_list:
+        print(comp)
         for key in comp["components"].keys():
             par = key
         ## now open the file
-            
+        print(par)
         file = uproot.open(pdf_path+comp["root-file"])
         
         if "{}/{}".format(spectrum,det_type) in file:
@@ -507,6 +624,40 @@ def create_counting_likelihood(data):
     return likelihood
 
 
+def plot_counting_calc(energies,data,values):
+    """ Make a plot to show the efficiency calculation"""
+    
+    vset = tc.tol_cset('vibrant')
+    Nb=values["Nb"]
+    Ns=values["Ns"]
+    
+    bkg= np.array([Nb,Nb,Nb,Nb])
+    sig= np.array([0,Ns,0])
+   
+   
+    
+    fig, axes = lps.subplots(1, 1, figsize=(4,4), sharex=True, gridspec_kw = {'hspace': 0})
+    centers=[(energies[i] + energies[i + 1]) / 2 for i in range(len(energies) - 1)]
+  
+    axes.bar(centers, data, width=np.diff(energies), edgecolor=vset.blue, align='center',color=vset.blue,alpha=0.3,linewidth=0,label="Data")
+    axes.step(energies,bkg, where="mid",color=vset.red,alpha=1,linewidth=1,label="Bkg.")
+    axes.step(centers,sig, where="mid",color=vset.teal,alpha=1,linewidth=1,label="Sig")
+
+    axes.legend(loc="best")
+   
+    axes.set_xlim(energies[0],energies[-1])
+
+    axes.set_xlabel("Energy [keV]")
+    axes.set_ylabel("Counts/bin")
+
+   
+    axes.set_ylabel("Counts/bin")
+
+   
+  
+    axes.set_title("Events for {} keV".format(centers[1]),fontsize=8)
+    plt.tight_layout()
+    plt.savefig("plots/priors/eff_calc_{}.pdf".format(centers[1]))
 
 def plot_eff_calc(energies,data_surv,data_cut,values):
     """ Make a plot to show the efficiency calculation"""
@@ -568,6 +719,9 @@ def extract_prior(prior:str):
 
         rv = truncnorm(a=a,b=5, loc=param2, scale=param3)
         high=param2+5*param3
+        low_err = 0 if param3 > param2 else param2-param3
+        high_err= param3+param2
+
     elif ("exp" in prior):
         split_parts = prior.split("/")
 
@@ -576,12 +730,14 @@ def extract_prior(prior:str):
             upper_limit = float( split_parts[1][:-1])
             rv= expon(scale=upper_limit/2.3)
             high = 2*upper_limit
+            low_err=0
+            high_err= upper_limit
         else:
             raise ValueError("exp prior doesnt contain the part /UpperLimit) needed")
     else:
         raise ValueError("Only supported priors are gaus and exp currently")
     
-    return rv,high
+    return rv,high,(low_err,high_err)
 
 
 
@@ -622,6 +778,8 @@ def compare_mc(max_energy,pdfs,decay,order,norm_peak,pdf,xlow,xhigh,scale,linewi
     
     pdf.savefig()
     
+
+
 def plot_mc(pdf,name,save_pdf,data=None,range_x=(500,4000),range_y=(0.01,5000),pdf2=None):
     vset = tc.tol_cset('vibrant')
 
@@ -651,7 +809,7 @@ def vals2hist(vals,hist):
 
 def slow_convolve(priors,pdfs,rvs,n_samp=10000):
     """
-    
+    Convolution done in a slow way but fast enough
     """
     ### get the number of bins and components
 
@@ -684,17 +842,6 @@ def slow_convolve(priors,pdfs,rvs,n_samp=10000):
 
 
 
-
-
-def fast_convolve():
-
-
-    ### create the data array
-
-    S= np.ones((1000,10,10000))
-    #S[:,0,0]=np.linspace(0,1000,1000)
-    print(S)
-    
     
 
 def plot_pdf(rv,high,samples=np.array([]),pdf_obj=None,name=""):
@@ -761,6 +908,7 @@ def get_pdf_and_norm(path,spectrum="mul_surv",det_type="all",r=(0,4000),b=10):
     return hist,N
 
 def get_counts_minuit(counts,energies):
+    """A basic counting analysis implemented in Minuit"""
     cost = create_counting_likelihood(counts)
     Ns_guess = counts[1]
 
@@ -774,8 +922,34 @@ def get_counts_minuit(counts,energies):
     m.minos()
     elow=abs(m.merrors["Ns"].lower)
     ehigh=abs(m.merrors["Ns"].upper)
+    plot_counting_calc(energies,counts,m.values)
 
     return m.values["Ns"],elow,ehigh
+
+def get_peak_counts(peak,name_peak,data_file,livetime=1):
+    """Get the counts in a peak in the data"""
+
+    regions = {name_peak:(peak-5,peak+5)}
+    left_sideband ={name_peak:(peak-15,peak-5)}
+    right_sideband ={name_peak:(peak+5,peak+15)}
+
+    det_types,name = get_det_types("sum")
+
+
+    energies= np.array([left_sideband[name_peak][0],left_sideband[name_peak][1],
+                        regions[name_peak][1],right_sideband[name_peak][1]])
+
+    data_counts = get_data_counts_total("mul_surv",det_types,regions,data_file,key_list=[name_peak])
+    data_counts_right = get_data_counts_total("mul_surv",det_types,right_sideband,data_file,key_list=[name_peak])
+    data_counts_left = get_data_counts_total("mul_surv",det_types,left_sideband,data_file,key_list=[name_peak])
+
+    ### the efficiency calculation
+    counts,low,high=get_counts_minuit(np.array([data_counts_left["all"][name_peak],data_counts["all"][name_peak],data_counts_right["all"][name_peak]]),
+                    
+                    energies
+                        )
+    
+    return counts/livetime,low/livetime,high/livetime
 
 def get_eff_minuit(counts_total,counts_after,energies):
     """ Get the efficiency with Minuit the likelihood is just a binned one"""
