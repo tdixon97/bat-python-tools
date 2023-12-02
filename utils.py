@@ -657,7 +657,7 @@ def plot_counting_calc(energies,data,values):
   
     axes.set_title("Events for {} keV".format(centers[1]),fontsize=8)
     plt.tight_layout()
-    plt.savefig("plots/priors/eff_calc_{}.pdf".format(centers[1]))
+    plt.savefig("plots/relative_intensity/counts_calc_{}.pdf".format(centers[1]))
 
 def plot_eff_calc(energies,data_surv,data_cut,values):
     """ Make a plot to show the efficiency calculation"""
@@ -741,19 +741,20 @@ def extract_prior(prior:str):
 
 
 
-def plot_mc_no_save(axes,pdf,name="",linewidth=0.6):
+def plot_mc_no_save(axes,pdf,name="",linewidth=0.6,range=(0,4000)):
     
     axes.set_xlabel("Energy [keV]")
     axes.set_ylabel("counts/10 keV")
 
-    axes.set_yscale("log")
-    axes.set_xlim(0,4000)
-    pdf.plot(ax=axes, linewidth=linewidth, yerr=False,flow= None,histtype="step",label=name)
+    axes.set_yscale("linear")
+    axes.set_xlim(range)
+    pdf.plot(ax=axes, linewidth=linewidth, yerr=False,flow= None,histtype="step",label=name,color="blue")
     #pdf.plot(ax=axes, linewidth=0.8, yerr=False,flow= None,histtype="fill",alpha=0.15)
 
     return axes
 
 def compare_mc(max_energy,pdfs,decay,order,norm_peak,pdf,xlow,xhigh,scale,linewidth=0.6):
+    """Compare MC files"""
     fig, axes = lps.subplots(1, 1,figsize=(6, 4), sharex=True, gridspec_kw = { "hspace":0})
     max_c=0
     axes.set_xlim(xlow,xhigh)
@@ -777,26 +778,57 @@ def compare_mc(max_energy,pdfs,decay,order,norm_peak,pdf,xlow,xhigh,scale,linewi
  
     
     pdf.savefig()
+
+def compare_intensity_curves(intensity_map,order,save=""):
+    """Compare intensity curves"""
+
+    fig, axes = lps.subplots(1, 1,figsize=(6, 4), sharex=True, gridspec_kw = { "hspace":0})
+   
+    print(json.dumps(intensity_map,indent=1))
+    maxI=0
+    for name in order:
+        map_tmp =intensity_map[name]
+        E=[]
+        I =[]
+        for peak in map_tmp:
+            E.append(peak)
+            I.append(map_tmp[peak])
+
+        E=np.array(E)
+        I=np.array(I)*100
+
+        axes.plot(E,I,label=name,linewidth=0.6)
+        axes.set_xlim(min(E)-100,max(E)+100)
+        if (max(I)>maxI):
+            maxI = max(I)
+
+        axes.set_ylim(0,maxI+30)
     
+        axes.set_xlabel("Peak Energy [keV]")
+        axes.set_ylabel("Relative Intensitiy [%]")
+    axes.legend(loc='upper right',edgecolor="black",frameon=True, facecolor='white',framealpha=1,fontsize=8)    
 
+    plt.savefig(save)
 
-def plot_mc(pdf,name,save_pdf,data=None,range_x=(500,4000),range_y=(0.01,5000),pdf2=None):
+def plot_mc(pdf,name,save_pdf,data=None,range_x=(500,4000),range_y=(0.01,5000),pdf2=None,scale="log",label=""):
+    """Plot the MC files"""
     vset = tc.tol_cset('vibrant')
 
     fig, axes = lps.subplots(1, 1,figsize=(5, 4), sharex=True, gridspec_kw = { "hspace":0})
     axes.set_xlabel("Energy [keV]")
     axes.set_ylabel("counts/10 keV")
     axes.set_title(name)
-    axes.set_yscale("log")
+    axes.set_yscale(scale)
     axes.set_xlim(range_x)
     axes.set_ylim(range_y)
     if (data is not None):
         data.plot(ax=axes,yerr=False,flow=None,histtype="fill",alpha=0.3,label="Data",color=vset.blue)
-    pdf.plot(ax=axes, linewidth=1,color=vset.red, yerr=False,flow= None,histtype="step",label="Best fit from screening")
+    pdf.plot(ax=axes, linewidth=1,color=vset.red, yerr=False,flow= None,histtype="step",label=label)
     if (pdf2 is not None):
         pdf2.plot(ax=axes, linewidth=1,color=vset.red,alpha=0.6, yerr=False,flow= None,histtype="step",label="90 pct upper limit")
 
-    axes.legend(loc='best',edgecolor="black",frameon=True, facecolor='white',framealpha=1)    
+    if (label!=""):
+        axes.legend(loc='best',edgecolor="black",frameon=True, facecolor='white',framealpha=1)    
 
     save_pdf.savefig()
 
