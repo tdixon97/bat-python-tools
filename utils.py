@@ -3,14 +3,16 @@ import pandas as pd
 import uproot
 import copy
 import hist
-
+import math
 from legend_plot_style import LEGENDPlotStyle as lps
 from datetime import datetime, timezone
 from scipy.stats import poisson
+from scipy.stats import norm
 lps.use('legend')
 import matplotlib.pyplot as plt
 import numpy as np
 import tol_colors as tc
+from hist import Hist
 import json
 from legendmeta import LegendMetadata
 import warnings
@@ -78,11 +80,12 @@ def ttree2df(filename:str,data:str)->pd.DataFrame:
     file = uproot.open(filename)
 
     # Access the TTree inside the file
-
+    tree =None
     for key in file.keys():
         if (data in key):
             tree = file[key]
-
+    if (tree==None):
+        raise ValueError("a tree containing {} not found in the file {}".format(data,filename))
     # Get the list of branches in the TTree
     branches = tree.keys()
 
@@ -102,7 +105,7 @@ def ttree2df(filename:str,data:str)->pd.DataFrame:
 
 
 
-def plot_two_dim(varx:np.ndarray,vary:np.ndarray,rangex:tuple,rangey:tuple,titlex:str,titley:str,title:str,bins:tuple,show=False,save=""):
+def plot_two_dim(varx:np.ndarray,vary:np.ndarray,rangex:tuple,rangey:tuple,titlex:str,titley:str,title:str,bins:tuple,show=False,save="",pdf=None):
     """
     A 2D scatter plot
     Parameters:
@@ -137,8 +140,10 @@ def plot_two_dim(varx:np.ndarray,vary:np.ndarray,rangex:tuple,rangey:tuple,title
     # Annotate the plot with correlation coefficient
     if (show==True):
         axes.annotate("Correlation = {:0.2f}".format(correlation_coefficient), (0.6, 0.88), xycoords="axes fraction", fontsize=10)
-        plt.savefig(save)
-        
+        if (pdf==None):
+            plt.savefig(save)
+        else:
+            pdf.savefig()
         plt.close()
 
     return correlation_coefficient
@@ -210,19 +215,19 @@ def get_nth_largest(matrix,n):
     """
     Get the nth largest element in the matrix and its index
     """
-    sort_m=-matrix
+    sort_m=matrix
     for i in range(matrix.shape[0]):
         for j in range(matrix.shape[1]):
                 if (i>=j):
                     sort_m[i,j]=0
-    
+                
     indices_nth_largest = np.argsort(sort_m.flatten())[-(n+1)]
     
     row_indices, col_indices = np.unravel_index(indices_nth_largest, matrix.shape)  
     
     return sort_m[row_indices,col_indices],row_indices,col_indices
 
-def plot_corr(df,i,j,labels,save):
+def plot_corr(df,i,j,labels,save,pdf=None):
     key1=df.keys()[i]
     key2=df.keys()[j]
     x=np.array(df[key1])
@@ -233,7 +238,7 @@ def plot_corr(df,i,j,labels,save):
         
     cor=plot_two_dim(x,y,rangex,rangey,"{} [1/yr]".format(labels[i]),
                                                     "{} [1/yr]".format(labels[j]),
-                                                    "{} vs {}".format(labels[i],labels[j]),bins,True,save)
+                                                    "{} vs {}".format(labels[i],labels[j]),bins,True,save,pdf=pdf)
     
 
 
@@ -259,19 +264,50 @@ def make_error_bar_plot(indexs,labels:list,y:np.ndarray,ylow:np.ndarray,yhigh:np
         y2=y2[indexs]
 
     height= 2+4*len(y)/29
-    fig, axes = lps.subplots(1, 1, figsize=(8, height), sharex=True, gridspec_kw = {'hspace': 0})
+    fig, axes = lps.subplots(1, 1, figsize=(6,3), sharex=True, gridspec_kw = {'hspace': 0})
 
     xin=np.arange(len(labels))
+    print(labels)
+    index_prior=np.array([],dtype=bool)
+    index_no_prior=np.array([],dtype=bool)
+    print(labels)
+    for i in range(len(labels)):
+        label = labels[i]
+        print(label)
+        if ("cables" in label) or ("wls" in label) or ("pen" in label) or ("sipm" in label) or ("insulator" in label):
+            index_prior=np.append(index_prior,True)
+            index_no_prior =np.append(index_no_prior,False)
+        else:
+            index_prior=np.append(index_prior,False)
+            index_no_prior =np.append(index_no_prior,True)
+    """
+    index_no_prior=np.array(index_no_prior)
+    index_prior=np.array(index_prior)
+    print(index_prior)
+    print(index_no_prior)
+    y=y[index_prior]
+    ylow=ylow[index_prior]
+    yhigh=yhigh[index_prior]
+    y2=y2[index_no_prior]
+    ylow2=ylow2[index_no_prior]
+    yhigh2=yhigh2[index_no_prior]
+    xin1=xin[index_prior]
+    xin2=xin[index_no_prior]
+    """
+    print(xin)
+    print(labels)
+    print(y,ylow,yhigh)
 
+    xin1=xin
     ### either split by category or not
     if categories is None:
         if (do_comp==False):
             axes.errorbar(y=xin+0.15*len(y)/30,x=y,xerr=[ylow,yhigh],fmt="o",color=vset.blue,ecolor=vset.cyan,markersize=1,label="MC")
         else:
-            axes.errorbar(y=xin+0.15*len(y)/30,x=y,xerr=[ylow,yhigh],fmt="o",color=vset.blue,ecolor=vset.cyan,markersize=1,
-                        label=label1)
-            axes.errorbar(y=xin-0.15*len(y2)/30,x=y2,xerr=[ylow2,yhigh2],fmt="o",color=vset.red,ecolor=vset.orange,markersize=1,
-                        label=label2)
+            axes.errorbar(y=xin1,x=y,xerr=[ylow,yhigh],fmt="o",color=vset.blue,ecolor=vset.cyan,markersize=1,
+                        label="With prior")
+            axes.errorbar(y=xin2,x=y2,xerr=[ylow2,yhigh2],fmt="o",color=vset.red,ecolor=vset.orange,markersize=1,
+                        label="Without prior")
     else:
         if (do_comp==True):
             raise ValueError("Splitting by category not implemented for comparison")
@@ -322,7 +358,7 @@ def make_error_bar_plot(indexs,labels:list,y:np.ndarray,ylow:np.ndarray,yhigh:np
         axes.set_xlim(low,upper)
  
     axes.set_yticks(axes.get_yticks())
-    axes.set_yticklabels([val for val in labels], fontsize=8)
+    axes.set_yticklabels([val for val in labels], fontsize=11)
     axes.set_xscale(scale)
 
     plt.grid()
@@ -333,8 +369,7 @@ def make_error_bar_plot(indexs,labels:list,y:np.ndarray,ylow:np.ndarray,yhigh:np
     #plt.show()
     if (do_comp==True):
         name_out="comp_{}_to_{}_{}".format(label1,label2,extra)
-    else:
-        name_out =" "
+   
 
     if (pdf is None):
         if (obj!="scaling_factor"):     
@@ -429,7 +464,7 @@ def get_index_by_type(names):
             index_Th.append(i)
         elif(key.find("Bi214")!=-1):
             index_U.append(i)
-        elif(key.find("K")!=-1):
+        elif(key.find("K42")!=-1):
         
             index_K.append(i)    
         elif (key.find("2v")!=-1):
@@ -487,7 +522,7 @@ def get_total_efficiency(det_types,cfg,spectrum,regions,pdf_path,det_sel="all",m
     return eff_total
 
 
-def get_efficiencies(cfg,spectrum,det_type,regions,pdf_path,name,spectrum_fit="",mc_list=None):
+def get_efficiencies(cfg,spectrum,det_type,regions,pdf_path,name,spectrum_fit="",mc_list=None,type_fit="icpc"):
     """ Get the efficiencies"""
 
     effs={}
@@ -503,14 +538,20 @@ def get_efficiencies(cfg,spectrum,det_type,regions,pdf_path,name,spectrum_fit=""
             effs[key]["2vbb_coax"]=0
             effs[key]["2vbb_ppc"]=0
             effs[key]["2vbb_icpc"]=0
-
+            effs[key]["K42_hpge_surface_bege"]=0
+            effs[key]["K42_hpge_surface_coax"]=0
+            effs[key]["K42_hpge_surface_ppc"]=0
+            effs[key]["K42_hpge_surface_icpc"]=0
+            effs[key]["alpha_ppc"]=0
+            effs[key]["alpha_bege"]=0
+            effs[key]["alpha_coax"]=0
+            effs[key]["alpha_icpc"]=0
         for key in cfg["fit"]["theoretical-expectations"].keys():
             if ".root" in key:
                 filename = key
-
-        if "{}/{}".format(spectrum_fit,"icpc") in cfg["fit"]["theoretical-expectations"][filename]:
+        if "{}/{}".format(spectrum_fit,type_fit) in cfg["fit"]["theoretical-expectations"][filename]:
         
-            icpc_comp_list=cfg["fit"]["theoretical-expectations"][filename]["{}/{}".format(spectrum_fit,name)]["components"]
+            icpc_comp_list=cfg["fit"]["theoretical-expectations"][filename]["{}/{}".format(spectrum_fit,type_fit)]["components"]
         else:
             warnings.warn("{}/{} not in MC PDFs".format(spectrum_fit,det_type))
             return effs,0
@@ -518,35 +559,47 @@ def get_efficiencies(cfg,spectrum,det_type,regions,pdf_path,name,spectrum_fit=""
 
         icpc_comp_list=mc_list
 
-
     comp_list = copy.deepcopy(icpc_comp_list)
-    
     for comp in comp_list:
-        print(comp)
+        
         for key in comp["components"].keys():
             par = key
         ## now open the file
-        print(par)
-        file = uproot.open(pdf_path+comp["root-file"])
-        
-        if "{}/{}".format(spectrum,det_type) in file:
-            hist = file["{}/{}".format(spectrum,det_type)]
-            N  = int(file["number_of_primaries"])
-            hist = hist.to_hist()
+      
+        if "root-file" in comp.keys():
+            file = uproot.open(pdf_path+comp["root-file"])
+            
+            if "{}/{}".format(spectrum,det_type) in file:
+                hist = file["{}/{}".format(spectrum,det_type)]
+                N  = int(file["number_of_primaries"])
+                hist = hist.to_hist()
+                for key,region in regions.items():
 
-            for key,region in regions.items():
+                    eff= float(integrate_hist(hist,region[0],region[1]))
+                    effs[key][par]=eff/N
+            else:
 
-                eff= float(integrate_hist(hist,region[0],region[1]))
-                
-                effs[key][par]=eff/N
+                warnings.warn("{}/{} not in MC PDFs".format(spectrum,det_type))
+                for key,region in regions.items():
+                    effs[key][par]=0
+        ### a formula not a file
         else:
-
-            warnings.warn("{}/{} not in MC PDFs".format(spectrum,det_type))
-            for key,region in regions.items():
-                effs[key][par]=0
-
+            comps = comp["components"]
+            for name in comps:
+                formula = comps[name]["TFormula"]
+           
+            ## curren   y only pol1 implemented
+            if "pol1" not in formula:
+                raise ValueError("Currently integration only works for pol1")
         
+            split_values = formula.split(":")
+            p0, p1 = map(float, split_values[1].split(","))
 
+            for key,region in regions.items():
+
+                eff= p0*(region[1]-region[0])+p1*(region[1]*region[1]-region[0]*region[0])/2
+                    
+                effs[key][par]=0
     return effs,1
    
 
@@ -658,6 +711,61 @@ def plot_counting_calc(energies,data,values):
     axes.set_title("Events for {} keV".format(centers[1]),fontsize=8)
     plt.tight_layout()
     plt.savefig("plots/relative_intensity/counts_calc_{}.pdf".format(centers[1]))
+    plt.close()
+
+
+
+def plot_relative_intensities(peak,outputs,ratios,data,data_err,orders,main_peak=2615):
+    ### now loop over the keys
+    
+    vset = tc.tol_cset('vibrant')
+
+    ratios=[]
+    names=[]
+    for component in orders:
+        ratio_tmp = outputs[component][peak]
+        ratios.append(100*ratio_tmp)
+        names.append(component)
+
+    ratios=np.array(ratios)
+    names=np.array(names)
+
+    fig, axes = lps.subplots(1, 1,figsize=(3, 3), sharex=True, gridspec_kw = { "hspace":0})
+    axes.set_xlim(0,10+max(max(ratios),data+data_err))
+    axes.set_title("Intensity ratio for  {} keV to {} keV".format(peak,main_peak))
+    axes.errorbar(ratios,names,color=vset.blue,fmt="o",label="MC")
+    axes.set_xlabel("Relative Intensity [%]")
+    axes.set_yticks(np.arange(len(names)),names,rotation=0,fontsize=8)
+    axes.axvline(x=data,color=vset.red,label="data")
+    axes.axvspan(xmin=data-data_err, xmax=data+data_err, alpha=0.2, color=vset.orange)
+    axes.legend(loc="best",edgecolor="black",frameon=True, facecolor='white',framealpha=1)
+    plt.savefig("plots/relative_intensity/effs_{}.pdf".format(peak))
+
+
+
+def normalized_poisson_residual(mu, obs):
+    """" code to compute normalised poisson residuals"""
+    
+    
+    if (obs<1):
+        obs=0
+    if mu < 50:
+        ## get mode
+
+        mode =math.floor(mu)
+
+        if (obs==0 and mode==0):
+            return 0
+        elif obs<mode:
+            prob = poisson.cdf(obs, mu, loc=0)
+            sign=-1
+        else:
+            prob = 1-poisson.cdf(obs-1,mu,loc=0)
+            sign=1
+        return sign*norm.ppf(1-prob)
+    else:
+        return (obs - mu) / np.sqrt(mu)
+
 
 def plot_eff_calc(energies,data_surv,data_cut,values):
     """ Make a plot to show the efficiency calculation"""
@@ -784,7 +892,6 @@ def compare_intensity_curves(intensity_map,order,save=""):
 
     fig, axes = lps.subplots(1, 1,figsize=(6, 4), sharex=True, gridspec_kw = { "hspace":0})
    
-    print(json.dumps(intensity_map,indent=1))
     maxI=0
     for name in order:
         map_tmp =intensity_map[name]
@@ -809,6 +916,30 @@ def compare_intensity_curves(intensity_map,order,save=""):
     axes.legend(loc='upper right',edgecolor="black",frameon=True, facecolor='white',framealpha=1,fontsize=8)    
 
     plt.savefig(save)
+
+
+def plot_N_Mc(pdfs,labels,name,save_pdf,data,range_x,range_y,scale,colors):
+    """Plot the MC files"""
+    
+    vset = tc.tol_cset('vibrant')
+
+    fig, axes = lps.subplots(1, 1,figsize=(6, 4), sharex=True, gridspec_kw = { "hspace":0})
+    axes.set_xlabel("Energy [keV]")
+    axes.set_ylabel("counts/10 keV")
+    axes.set_title(name)
+    axes.set_yscale(scale)
+    axes.set_xlim(range_x)
+    axes.set_ylim(range_y)
+    if (data is not None):
+        data.plot(ax=axes,yerr=False,flow=None,histtype="fill",alpha=0.3,label="Data",color=vset.blue)
+    for pdf,c,l in zip(pdfs,colors,labels):
+        pdf.plot(ax=axes, linewidth=.6,color=c,yerr=False,flow= None,histtype="step",label=l)
+   
+
+    axes.legend(loc='best',edgecolor="black",frameon=True, facecolor='white',framealpha=1)    
+
+    save_pdf.savefig()
+
 
 def plot_mc(pdf,name,save_pdf,data=None,range_x=(500,4000),range_y=(0.01,5000),pdf2=None,scale="log",label=""):
     """Plot the MC files"""
@@ -907,6 +1038,7 @@ def scale_hist(hist,scale):
         hist_scale[i]*=scale
 
     return hist_scale
+
 def get_hist(obj,range=(132,4195),bins=10):
     return obj.to_hist()[range[0]:range[1]][hist.rebin(bins)]
 
@@ -958,22 +1090,22 @@ def get_counts_minuit(counts,energies):
 
     return m.values["Ns"],elow,ehigh
 
-def get_peak_counts(peak,name_peak,data_file,livetime=1):
+def get_peak_counts(peak,name_peak,data_file,livetime=1,spec="mul_surv",size=5):
     """Get the counts in a peak in the data"""
 
-    regions = {name_peak:(peak-5,peak+5)}
-    left_sideband ={name_peak:(peak-15,peak-5)}
-    right_sideband ={name_peak:(peak+5,peak+15)}
+    regions = {name_peak:(peak-size,peak+size)}
+    left_sideband ={name_peak:(peak-3*size,peak-size)}
+    right_sideband ={name_peak:(peak+size,peak+3*size)}
 
-    det_types,name = get_det_types("sum")
+    det_types,name,Ns = get_det_types("all")
 
-
+    print(json.dumps(det_types,indent=1))
     energies= np.array([left_sideband[name_peak][0],left_sideband[name_peak][1],
                         regions[name_peak][1],right_sideband[name_peak][1]])
 
-    data_counts = get_data_counts_total("mul_surv",det_types,regions,data_file,key_list=[name_peak])
-    data_counts_right = get_data_counts_total("mul_surv",det_types,right_sideband,data_file,key_list=[name_peak])
-    data_counts_left = get_data_counts_total("mul_surv",det_types,left_sideband,data_file,key_list=[name_peak])
+    data_counts = get_data_counts_total(spec,det_types,regions,data_file,key_list=[name_peak])
+    data_counts_right = get_data_counts_total(spec,det_types,right_sideband,data_file,key_list=[name_peak])
+    data_counts_left = get_data_counts_total(spec,det_types,left_sideband,data_file,key_list=[name_peak])
 
     ### the efficiency calculation
     counts,low,high=get_counts_minuit(np.array([data_counts_left["all"][name_peak],data_counts["all"][name_peak],data_counts_right["all"][name_peak]]),
@@ -1033,7 +1165,7 @@ def get_data_counts(spectrum,det_type,regions,file):
 def name2number(meta,name:str):
     """Get the channel number given the name"""
 
-    meta = LegendMetadata()
+    meta = LegendMetadata("../legend-metadata")
 
     chmap = meta.channelmap(datetime.now())
 
@@ -1076,7 +1208,7 @@ def get_channel_floor(name:str):
 def get_channels_map():
     """ Get the channels map"""
 
-    meta = LegendMetadata()
+    meta = LegendMetadata("../legend-metadata/")
  
     ### 1st July should be part of TAUP dataset
     time = datetime(2023, 7, 1, 00, 00, 00, tzinfo=timezone.utc)
@@ -1113,7 +1245,7 @@ def get_channels_map():
 def get_livetime():
     """ Get the livetime from the metadata"""
 
-    meta = LegendMetadata()
+    meta = LegendMetadata("../legend-metadata")
 
     bad_runs=[("p04","r006"),("p07","r000")]
  
@@ -1146,9 +1278,9 @@ def get_livetime():
 def get_det_types(det_type,string_sel=0,det_sel=None):
     """Get a dictonary of detector types"""
 
-    meta = LegendMetadata()
-
-    if (det_type!="sum" and det_type!="str" and det_type!="chan" and det_type!="floor"):
+    meta = LegendMetadata("../legend-metadata")
+    Ns=[]
+    if (det_type!="sum" and det_type!="str" and det_type!="chan" and det_type!="floor" and det_type!="all"):
         det_types={"icpc": {"names":["icpc"],"types":["icpc"]},
                "bege": {"names":["bege"],"types":["bege"]},
                "ppc": {"names":["ppc"],"types":["ppc"]},
@@ -1158,7 +1290,9 @@ def get_det_types(det_type,string_sel=0,det_sel=None):
     elif (det_type=="sum"):
         det_types={"all":{"names":["icpc","bege","ppc","coax"],"types":["icpc","bege","ppc","coax"]}}
         namet="all"
-    
+    elif (det_type=="all"):
+        det_types={"all":{"names":["all"],"types":["icpc"]}}
+        namet="all"
     elif(det_type=="str"):
         string_channels,string_types = get_channels_map()
         det_types={}
@@ -1178,6 +1312,8 @@ def get_det_types(det_type,string_sel=0,det_sel=None):
         string_channels,string_types = get_channels_map()
         det_types={}
         namet="channels"
+        Ns=[]
+        N=0
         for string in string_channels.keys():
 
             if (string_sel==0 or string_sel==string):
@@ -1187,7 +1323,8 @@ def get_det_types(det_type,string_sel=0,det_sel=None):
                 for chan,type in zip(chans,types):
                     if (det_sel==None or type==det_sel):
                         det_types[chan]={"names":[chan],"types":[type]}
-
+                        N+=1
+            Ns.append(N)
     ### select by floor
     elif (det_type=="floor"):
         string_channels,string_types = get_channels_map()
@@ -1209,4 +1346,50 @@ def get_det_types(det_type,string_sel=0,det_sel=None):
                         det_types[group]["names"].append(chan)
                         det_types[group]["types"].append(string_types[string][i])
 
-    return det_types,namet
+    return det_types,namet,Ns
+
+
+def project_sum(histo):
+    """ Take a 2D histogram and create a 1D histogram with the sum of the bin contents
+        Note: This is in principle impossible here an approximation is used where a sum of a -- a+1 and b-- b+1 is split evenly between bin a+b -- a+b+1 and a+b+1 --- a+b +2
+        If you want a proper summed histo you should build it directly from the raw data
+    """
+    w,x,y=histo.to_numpy()
+  
+    hist_energy_sum =( Hist.new.Reg(int((len(x)-2)*2)+2, 0, x[-1]+y[-1]).Double())
+  
+    rows, cols = w.shape
+
+    # Create an array of indices for each element
+    indices = np.arange(rows) + np.arange(cols)[:, None]
+  
+    # Use numpy's bincount to calculate diagonal sums
+    diagonal_sums = np.bincount(indices.flatten(), weights=w.flatten())
+ 
+    for i in range(hist_energy_sum.size-3):
+        hist_energy_sum[i]+=diagonal_sums[i]/2.     
+        hist_energy_sum[i+1]+=diagonal_sums[i]/2.
+  
+    return hist_energy_sum
+
+
+def variable_rebin(histo,edges):
+    """ Perform a variable rebinning of a hist object"""
+    histo_var =( Hist.new.Variable(edges).Double())
+    for i in range(histo.size-2):
+        cent = histo.axes.centers[0][i]
+    
+        histo_var[cent*1j]+=histo.values()[i]
+
+    return histo_var
+
+
+def normalise_histo(hist):
+    """ Normalise a histogram into units of counts/keV"""
+
+    widths= np.diff(hist.axes.edges[0])
+
+    for i in range(hist.size-2):
+        hist[i]/=widths[i]
+
+    return hist
