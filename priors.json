@@ -8,7 +8,7 @@
             "file" : "l200a-hv-signal-cables-Ra224-to-Pb208-tier_pdf.root",
             "best_fit": 1.13E3,
             "prior": "gaus:1,1.13E3,2.38E3",
-            "type":"icpms"
+            "type":"hpge"
             },
         {
             "name" : "Bi212Tl208_hpge_support_copper",
@@ -48,7 +48,7 @@
             "file" : "l200a-birds-nest-Ra224-to-Pb208-tier_pdf.root",
             "best_fit": 9.15E3,
             "prior": "gaus:1,9.15E3,1.43E3",
-            "type": "guess"  
+            "type": "estimate"  
          },
          {
              "name" : "Bi212Tl208_front_end_electronics",
@@ -88,7 +88,7 @@
             "file" : "l200a-hv-signal-cables-Rn222-to-Pb214-tier_pdf.root",
             "best_fit": 1.28E4,
             "prior": "gaus:1,1.28E4,1.06E4",
-            "type":"icpms"        
+            "type":"hpge"        
             },
         {
             "name" : "Pb214Bi214_hpge_support_copper",
@@ -130,7 +130,7 @@
              "file" : "l200a-birds-nest-Rn222-to-Po214-tier_pdf.root",
             "best_fit": 1.28E4,
             "prior": "gaus:1,1.28E4,1.10E3",
-            "type":"guess"        
+            "type":"estimate"        
          },
          {
              "name" : "Pb214Bi214_front_end_electronics",
