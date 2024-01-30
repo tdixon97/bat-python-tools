@@ -35,6 +35,7 @@ style = {
     "flow": None,
     "lw": 0.8,
 }
+
 parser = argparse.ArgumentParser(description='A script with command-line argument.')
 parser.add_argument("-p","--peak",type=int,help="peak energy",default=2615)
 parser.add_argument("-n","--name",type=str,help="peak name",default="Tl_peak")
@@ -118,3 +119,5 @@ axes.axvline(x=eff,color=vset.red,label="data")
 axes.axvspan(xmin=eff-eff_low, xmax=eff+eff_high, alpha=0.2, color=vset.orange)
 axes.legend(loc="best",edgecolor="black",frameon=True, facecolor='white',framealpha=1)
 plt.savefig("plots/lar/effs_{}.pdf".format(peak))
+
+
