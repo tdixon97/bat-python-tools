@@ -52,17 +52,20 @@ style = {
 priors_file ="priors.json"
 pdf_path = "../hmixfit/inputs/pdfs/l200a-pdfs_vancouver23/"
 data_path="../hmixfit/inputs/data/datasets/l200a-vancouver23-dataset-v0.1.root"
+ref_fit = "../hmixfit/results/hmixfit-l200a_vancouver_simple_all/histograms.root "
+ref_ds="l200a_vancouver23_dataset_v0_1_all"
 spec="mul_surv"
+json_file="components.json"
+with open(json_file, 'r') as file:
+    components = json.load(file, object_pairs_hook=OrderedDict)
+
 with open(priors_file,"r") as file_cfg:
     priors =json.load(file_cfg)
 
 livetime=0.36455
-print(json.dumps(priors,indent=1))
-
-print(utils.priors2table(priors))
 order=["fiber_shroud","sipm","birds_nest","wls_reflector","pen_plates","front_end_electronics","hpge_insulators","hpge_support_copper","cables","mini_shroud"]
 
-
+bins=1
 
 # extract a prior plot it and generate random numbers
 rvs={}
@@ -84,7 +87,7 @@ with PdfPages('plots/priors/prior_distributions.pdf') as pdf:
         utils.plot_pdf(rv1,high1,samples1,pdf,name = comp["name"])
         rvs[comp["name"]]=rv1
 
-        mc_pdf,N = utils.get_pdf_and_norm(pdf_path+comp["file"],b=10,r=(0,4000))
+        mc_pdf,N = utils.get_pdf_and_norm(pdf_path+comp["file"],b=bins,r=(0,4000))
         mc_pdf_1,N = utils.get_pdf_and_norm(pdf_path+comp["file"],b=1,r=(0,4000))
 
         pdf_scale=utils.scale_hist(mc_pdf,1/N)
@@ -118,7 +121,7 @@ for type in ["Bi212Tl208","Pb214Bi214"]:
 #### add possibility to get efficiencies
 
 ## first get a detector type map 
-det_types,name = utils.get_det_types("sum")
+det_types,name,Ns = utils.get_det_types("sum")
 
 
 ### now a regions map
@@ -165,11 +168,49 @@ with PdfPages('plots/priors/exp_contributions.pdf') as pdf:
         elif (upper_limit==0 and "Bi214" in comp["name"]):
             total_Bi+=pdf_norm
             index_Bi+=1
+total_other=None
+total_K42=None
+total_K40=None
+total_alpha=None
+### get the other contributions
+with uproot.open(ref_fit) as f:
+    for key in f[ref_ds]["originals"].keys():
+
+        if ("Bi" in key) or ("fitted_data" in key) or ("total_model" in key):
+            continue
+
+        if (total_other is None):
+            total_other= utils.get_hist(f[ref_ds]["originals"][key],bins=bins,range=(0,4000))
+        else:
+            total_other+=utils.get_hist(f[ref_ds]["originals"][key],bins=bins,range=(0,4000))
+
+    hs={}
+    for comp, info in components.items():
+     
+               
+        hs[comp]=None
+
+        ## loop over the contributions to h
+
+        for name in info["hists"]:
 
 
+               
+            if name not in f[ref_ds]["originals"]:
+                    continue
+            if hs[comp] is None:
+                hs[comp] = utils.get_hist(f[ref_ds]["originals"][name],bins=bins,range=(0,4000))
+            else:
+                hs[comp] += utils.get_hist(f[ref_ds]["originals"][name],bins=bins,range=(0,4000))
+                    
+ 
 ### get the total 
 total = copy.deepcopy(total_Tl)
 total+=total_Bi
+for i in range(total.size - 2):
+               
+    total[i]+=total_other[i].value
+
 
 output=utils.slow_convolve(priors,pdfs,rvs)
 data = utils.get_data(data_path,b=10,r=(0,4000))
@@ -293,7 +334,9 @@ with PdfPages('plots/priors/prior_values.pdf') as pdf:
 lows=np.array(lows)
 highs=np.array(highs)
 pdf_high = utils.vals2hist(highs,copy.deepcopy(total_Tl))
-
+for i in range(pdf_high.size - 2):
+               
+    pdf_high[i]+=total_other[i].value
 ### lets make a plot comparing the different shapes
 with PdfPages('plots/priors/shapes.pdf') as pdf:
    
@@ -306,10 +349,47 @@ with PdfPages('plots/priors/shapes.pdf') as pdf:
     utils.compare_mc(2204j,pdfs,"Pb214Bi214",order,1764j,pdf,1900,2500,"linear",linewidth=.8)
 
 ### also get the data
+pdfs_tot=[]
+colors=[]
+labels=[]
+pdfs_tot.append(total)
+colors.append("#000000")
+labels.append("Total")
+
+for comp in components:
+    if (comp=="2vbb" or comp=="alpha" or comp=="K42" or comp=="K40"):
+        pdfs_tot.append(hs[comp])
+        colors.append(components[comp]["style"]["color"])
+        labels.append(comp)
+    if (comp=="U"):
+        pdfs_tot.append(total_Bi)
+        colors.append(components[comp]["style"]["color"])
+        labels.append(comp)
+    if (comp=="Th"):
+        pdfs_tot.append(total_Tl)
+        colors.append(components[comp]["style"]["color"])
+        labels.append(comp)
 
 with PdfPages('plots/priors/total_contributions.pdf') as pdf:
         utils.plot_mc(total_Tl,"Total $^{212}$Bi+ $^{208}$Tl",pdf,data=data)
         utils.plot_mc(total_Bi,"Total $^{214}$Pb+ $^{214}$Bi",pdf,data=data)
+        utils.plot_mc(total_other,"Total other",pdf,data=data)
+
         utils.plot_mc(total,"Total",pdf,data=data,pdf2=pdf_high)
         utils.plot_mc(total,"Total",pdf,data=data,range_x=(1900,2700),range_y=(0.01,500),pdf2=pdf_high)
+        
+        utils.plot_N_Mc(pdfs_tot,labels,"",pdf,data,(565,4000),(0.05,2e4),"log",colors)
+        utils.plot_N_Mc(pdfs_tot,labels,"",pdf,data,(1550,3000),(0.05,400),"linear",colors)
+        utils.plot_N_Mc(pdfs_tot,labels,"",pdf,data,(1900,2300),(0.05,100),"linear",colors)
 
+
+
+
+total_data = utils.integrate_hist(data,1930,2099)+utils.integrate_hist(data,2109,2114)+utils.integrate_hist(data,2124,2190)
+total = utils.integrate_hist(total,1930,2099)+utils.integrate_hist(total,2109,2114)+utils.integrate_hist(total,2124,2190)
+total_high = utils.integrate_hist(pdf_high,1930,2099)+utils.integrate_hist(pdf_high,2109,2114)+utils.integrate_hist(pdf_high,2124,2190)
+
+E=2099-1930+2114-2109+2190-2124
+M=44
+
+print(total_data/(E*M),np.sqrt(total_data)/(E*M),total/(E*M),total_high/(E*M))
