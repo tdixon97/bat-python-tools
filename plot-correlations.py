@@ -14,6 +14,7 @@ import utils
 import json
 import mplhep
 import pandas as pd
+from matplotlib.backends.backend_pdf import PdfPages
 
 vset = tc.tol_cset('vibrant')
 mset = tc.tol_cset('muted')
@@ -136,11 +137,13 @@ if (make_plots==True):
         j+=1
         
 matrix=np.array(matrix)
-for n in range(10):
-    cor,i,j = utils.get_nth_largest(matrix,n)
-    
-    print("{}: {} to {} = {:0.2f} ".format(n,labels[i],labels[j],cor))
-    utils.plot_corr(df,i,j,labels,"plots/fit_correlations/Correlation_{}_to_{}.pdf".format(labels[i],labels[j]))
+with PdfPages('plots/fit_correlations/corrs.pdf') as pdf:
+
+    for n in range(100):
+        cor,i,j = utils.get_nth_largest(np.abs(matrix),n)
+        
+        print("{}: {} to {} = {:0.2f} ".format(n,labels[i],labels[j],cor))
+        utils.plot_corr(df,i,j,labels,"plots/fit_correlations/Correlation_{}_to_{}.pdf".format(labels[i],labels[j]),pdf=pdf)
 utils.plot_correlation_matrix(matrix,"","plots/fit_correlations/Full_matrix_{}.pdf".format(tree_name),show=True)
 utils.plot_correlation_matrix(utils.twoD_slice(matrix,index_U),"","plots/fit_correlations/Matrix_U_{}.pdf".format(tree_name))
 utils.plot_correlation_matrix(utils.twoD_slice(matrix,index_Th),"","plots/fit_correlations/Matrix_Th_{}.pdf".format(tree_name))
