@@ -8,7 +8,7 @@
 	"Nvbb"
     ],
       "style": {
-	            "linewidth":0.8,
+	            "linewidth":0.6,
       "color": "#999933",
       "label": "$2\\nu\\beta\\beta$"
     }
@@ -22,7 +22,7 @@
 	"alpha"
     ],
     "style": {
-                "linewidth":0.8,
+                "linewidth":0.6,
 	"label": "$\\alpha$",
 	"color":"orange"
     }
@@ -40,7 +40,7 @@
 	"Ac228_pen_plates"
     ],
       "style": {
-	  "linewidth":0.8,
+	  "linewidth":0.6,
       "color": "#33BBEE",
       "label": "Th"
     }
@@ -59,7 +59,7 @@
     "style": {
       "color": "#009988",
 	"label": "U",
-	          "linewidth":0.8
+	          "linewidth":0.6
     }
   },
   "K40": {
@@ -73,7 +73,7 @@
     "style": {
       "color": "#CC3311",
 	"label": "$^{40}$K",
-	          "linewidth":0.8
+	          "linewidth":0.6
     }
   },
   "K42": {
@@ -93,7 +93,7 @@
     "style": {
       "color": "#EE3377",
 	"label": "$^{42}$K",
-	          "linewidth":0.8
+	          "linewidth":0.6
     }
   },
     "Co60":{
@@ -101,7 +101,7 @@
 	["Co60_cables",
 	 "Co60_hpge_support_copper"
 	],
-	"style":{          "linewidth":0.8,
+	"style":{          "linewidth":0.6,
     "label":"$^{60}$Co"}
     },
     
