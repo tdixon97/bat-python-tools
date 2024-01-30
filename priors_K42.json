@@ -1,0 +1,36 @@
+
+{   
+    "components":[
+        {
+        "name" : "K42_cables",
+        "full-name":"HV & Sig. cables",
+        "file" : "l200a-hv-signal-cables-K42-tier_pdf.root"
+        },
+        {
+            "name" : "K40_cables",
+            "full-name":"HV & Sig. cables",
+            "file" : "l200a-hv-signal-cables-K40-tier_pdf.root"
+        },
+        {
+            "name" : "K42_above",
+            "full-name":"Above array",
+            "file" : "l200a-lar-cylinder-above-array-K42-tier_pdf.root"
+            },
+        {
+            "name" : "K42_outside",
+            "full-name":"Outside minishroud",
+            "file" : "l200a-lar-outside-ms-K42-tier_pdf.root"
+        },
+        {
+            "name" : "K42_inside",
+            "full-name":"Inside minishroud",
+            "file" : "l200a-lar-inside-ms-K42-tier_pdf.root"
+        },
+        {
+            "name" : "K42_surface",
+            "full-name":"HPGe surface",
+            "file" : "l200a-hpge-surface-K42-tier_pdf.root"
+        }
+    ]
+}
+
