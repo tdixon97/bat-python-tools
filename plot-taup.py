@@ -7,12 +7,13 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 import numpy as np
 import tol_colors as tc
+from hist import Hist
 import hist
 import argparse
 import re
 import utils
 import json
-
+from matplotlib.backends.backend_pdf import PdfPages
 vset = tc.tol_cset('vibrant')
 mset = tc.tol_cset('muted')
 plt.rc('axes', prop_cycle=plt.cycler('color', list(vset)))
@@ -21,33 +22,40 @@ plt.rc('axes', prop_cycle=plt.cycler('color', list(vset)))
 style = {
     "yerr": False,
     "flow": None,
-    "lw": 0.8,
+    "lw": 0.6,
 }
 
 
 
 
 parser = argparse.ArgumentParser(description='A script with command-line argument.')
-parser.add_argument('-d','--det_type', type=str, help='Detector type',default='all')
-parser.add_argument('-l','--lower_x', type=int, help='Low range',default=565)
-parser.add_argument('-u','--upper_x', type=int, help='Upper range',default=3000)
-parser.add_argument("-s","--scale",type=str,help="Scale",default="log")
-parser.add_argument("-o","--out_file",type=str,help="file",default="../hmixfit/results/hmixfit-l200a-taup-silver-dataset-m1-histograms.root")
+parser.add_argument('-d','--det_type', type=str, help='The detector type either by_type,multi, all, sum or a particular spectrum (icpc etc)',default='all')
+parser.add_argument('-D','--det_types', type=str, help='Comma seperated list of detector types like icpc,bege etc')
+parser.add_argument('-N','--type_names', type=str, help='Comma seperated list of fit spectrum names')
+parser.add_argument('-l','--lower_x', type=str, help='Low range to display',default=565)
+parser.add_argument('-u','--upper_x', type=str, help='Upper range to display',default=3000)
+parser.add_argument("-s","--scale",type=str,help="Scale either log or linear",default="log")
+parser.add_argument("-o","--out_file",type=str,help="file with the histograms from the fit",default="../hmixfit/results/hmixfit-l200a-taup-silver-dataset-m1-histograms.root")
 parser.add_argument("-c","--components",type=str,help="json components config file path",default="components.json")
-parser.add_argument("-b","--bins",type=int,help="Binning",default=15)
-parser.add_argument("-r","--regions",type=int,help="Shade regions",default=0)
+parser.add_argument("-b","--bins",type=int,help="Binning to use",default=15)
+parser.add_argument("-r","--regions",type=int,help="Shade regions on the plot",default=0)
 parser.add_argument("-f","--fit_name",type=str,help="fit name",default="l200a_vancouver23_dataset_v0_1")
+parser.add_argument("-w","--width",type=int,help="width for canvas",default=7)
 
-parser.add_argument("-w","--width",type=int,help="width for canvas",default=6)
-
+#TODO:
+#1) make the code figure out fit name automatically
 ### read the arguments
 
 
 args = parser.parse_args()
 det_type=args.det_type
-xlow=args.lower_x
-xhigh=args.upper_x
-ylowlim =0.05
+det_types = utils.csv_string_to_list(args.det_types,str)
+type_names = utils.csv_string_to_list(args.type_names,str)
+
+print(det_types)
+xlows=utils.csv_string_to_list(args.lower_x)
+xhighs=utils.csv_string_to_list(args.upper_x)
+ylowlim =0.01
 scale=args.scale
 outfile=args.out_file
 first_index =utils.find_and_capture(outfile,"hmixfit-")
@@ -69,208 +77,366 @@ regions={"$2\\nu\\beta\\beta$":(800,1300),
          }
 colors=[vset.red,vset.orange,vset.magenta,vset.teal,"grey"]
 
+get_originals=True
+
+### options to run this code
+
+
+
+#### creat the gamma lines plots
+### ---------------------------
+
+gamma_line_plots={
+    "Tl":
+    {
+        "lines":[583,2615],
+        "data":[],
+        "model":[],
+        "groups":[0],
+        "names":[],
+        "count":0
+    },
+    "Bi":{
+        "lines":[609,1764,2204],
+        "data":[],
+        "model":[],
+        "groups":[0],
+        "names":[],
+        "count":0
+    },
+    "K":{
+        "lines":[1461,1525],
+        "data":[],
+        "model":[],
+        "groups":[0],
+        "names":[],
+        "count":0
+    }
+
+}
+gamma_line_plots={}
+
 
 with open(json_file, 'r') as file:
     components = json.load(file, object_pairs_hook=OrderedDict)
 
 def get_hist(obj):
-    return obj.to_hist()[132:4195][hist.rebin(bin)]
+    return obj.to_hist()[hist.rebin(bin)]
 
 def get_hist_rb(obj):
     return obj.to_hist()
 
-if det_type=="multi" or det_type =="sum":
-    datasets = ["{}_bege".format(fit_name), "{}_icpc".format(fit_name),"{}_ppc".format(fit_name),"{}_coax".format(fit_name)]
-    labels = ["BEGe detectors after QC", "ICPC detectors after QC","PPC detectors after QC","COAX detectors after QC"]
-else:
-    datasets=["{}_{}".format(fit_name,det_type)]
-    labels=["{} detectors after QC".format(det_type)]
-
-y=6
-if det_type!="multi":
-    y=4
 
 
-## create the axes
-if (det_type=="multi" ):
-    fig, axes = lps.subplots(len(datasets), 1, figsize=(width, y), sharex=True, gridspec_kw = {'hspace': 0})
-else:
-    fig, axes_full = lps.subplots(2, 1, figsize=(width, y), sharex=True, gridspec_kw = { 'height_ratios': [8, 2],"hspace":0})
-
-if det_type=="multi":
-    for ax in axes:
-        ax.set_axisbelow(True)
-        ax.tick_params(axis="both", which="both", direction="in")
-else:
-    axes=np.array([axes_full[0]])
+### save to one PDF
+with PdfPages("plots/fit_plots/{}_{}_{}_{}_{}.pdf".format(name_out,det_type,scale,bin,comp_name)) as pdf:
     
-get_originals=False
+    ## loop over detector type
+    for det_type,type_name,xlow,xhigh in zip(det_types,type_names,xlows,xhighs):
+        gamma_counter=0
 
-
-
-
-
-
-### create the plot
-with uproot.open(outfile) as f:
-
-    ## loop over datasets
-    hs={}
-    #for ds, ax, title in zip(datasets, axes.flatten(), labels):
-    for i in range(len(datasets)):
-        ds = datasets[i]   
-        
-        if (det_type=="multi"):
-                ax=axes[i]
-                title=labels[i]
+        if det_type=="multi" or det_type =="sum":
+            datasets = ["{}_bege".format(fit_name), "{}_icpc".format(fit_name),"{}_ppc".format(fit_name),"{}_coax".format(fit_name)]
+            labels = ["BEGe detectors after QC", "ICPC detectors after QC","PPC detectors after QC","COAX detectors after QC"]
         else:
-            ax=axes[0]
-            title=labels[0]
-       
-
-        for comp, info in components.items():
-         
-            if (det_type!="sum" or ds==datasets[0]):
-               
-                hs[comp]=None
-
-            ## loop over the contributions to h
-
-            for name in info["hists"]:
-
-
-                if get_originals==True:
-                    if name not in f[ds]["originals"]:
-                        #raise ValueError("PDF {} not in f[{}]".format(name,ds))
-                        continue
-                    if hs[comp] is None:
-                        hs[comp] = get_hist(f[ds]["originals"][name])
-                    else:
-                        hs[comp] += get_hist(f[ds]["originals"][name])
-                    
-                else:
-                    if name not in f[ds]:
-                        #raise ValueError("PDF {} not in f[{}]".format(name,ds))
-                        continue
-                    if hs[comp] is None:
-                        hs[comp] = get_hist_rb(f[ds][name])
-                    else:
-                        hs[comp] += get_hist_rb(f[ds][name])
-
-             
-       
-            if hs[comp] is None:
-                continue
-            ### scale for bin width
-            bin_widths = np.diff(hs[comp].axes.edges[0])
-            
-            if (det_type=="sum" and ds!=datasets[-1]):
-                continue
-            
-            ### make the residual plot
-    
-            if (comp=="data"):
-                data=hs[comp].values()
-                bins=hs[comp].axes.centers[0]
-                bin_widths = np.diff(hs[comp].axes.edges[0])
-            if (comp=="total_model"):
-                pred=hs[comp].values()
-                bin_widths = np.diff(hs[comp].axes.edges[0])
-
-          
-            ### rescale bin contents
-            for i in range(hs[comp].size - 2):
-                E=hs[comp].axes.centers[0][i]
-        
-                if hs[comp][i] == 0:
+            datasets=["{}_{}".format(fit_name,det_type)]
+            labels=[type_name]
                 
-                    hs[comp][i] = 1.05*ylowlim
-            
-                if (get_originals==False):
-                    hs[comp][i]*=10./bin_widths[i]
+        ## set height of histo
+        y=4
+        if det_type!="multi":
+            y=2.5
 
-            hs[comp].plot(ax=ax, **style, **info["style"])
 
-           
-        if (det_type=="sum" and ds!=datasets[-1]):
-                continue
-        
-        if (get_originals==False):
-            residual = np.array([((d - m) / (d ** 0.5)) if d > 0.5 else 0 for d, m in zip(data, pred)])
+        ## create the axes
+        if (det_type=="multi" ):
+            fig, axes = lps.subplots(len(datasets), 1, figsize=(width, y), sharex=True, gridspec_kw = {'hspace': 0})
         else:
-            residual = np.array([((d*s/10 - m*s/10) / ((d*s/10) ** 0.5)) if d > 0.5 else (d*s/10 - m*s/10) for d, m,s in zip(data, pred,bin_widths)])
+            fig, axes_full = lps.subplots(2, 1, figsize=(width, y), sharex=True, gridspec_kw = { 'height_ratios': [8, 2],"hspace":0})
 
-        
-        masked_values = np.ma.masked_where((bins > xhigh)  | (bins < xlow), pred)
-        masked_values_data = np.ma.masked_where((bins > xhigh)  | (bins < xlow), data)
-
-        maxi = max(masked_values.max(),masked_values_data.max())
-        max_y = maxi+2*np.sqrt(maxi)+1
-        if (scale=="log"):
-            max_y=3*max_y
+        if det_type=="multi":
+            for ax in axes:
+                ax.set_axisbelow(True)
+                ax.tick_params(axis="both", which="both", direction="in")
         else:
-            max_y=1.3*max_y
+            axes=np.array([axes_full[0]])
             
-        ax.set_yscale("linear")
-        ax.set_ylim(bottom=ylowlim,top=max_y)
-        idx=0
-        if (shade_regions==True):
-            for region in regions.keys():
-                range = regions[region]
-                ax.fill_between(np.array([range[0],range[1]]),np.array([max_y,max_y]),
-                                label=region,alpha=0.3,color=colors[idx],linewidth=0)
-                idx+=1
 
-        if (exclude_range!=0):
-            ax.fill_between(np.array([exclude_range[0],exclude_range[1]]),np.array([max_y,max_y]),
-                                label="Not in fit",alpha=0.5,color="grey",linewidth=0)
+        ### create the plot
+        with uproot.open(outfile) as f:
 
-        if ds == datasets[0] or det_type=="sum":
-            legend=ax.legend(loc='upper right',edgecolor="black",frameon=True, facecolor='white',framealpha=1)
-            ax.set_legend_annotation()
+            ## loop over datasets
+            hs={}
+            #for ds, ax, title in zip(datasets, axes.flatten(), labels):
+            for i in range(len(datasets)):
+                ds = datasets[i]   
+                
+                if (det_type=="multi"):
+                        ax=axes[i]
+                        title=labels[i]
+                else:
+                    ax=axes[0]
+                    title=labels[0]
             
-        elif ds==datasets[len(datasets)-1]:
-            ax.xaxis.set_tick_params(top=False)
-            ax.set_legend_logo(position='upper right', logo_type = 'preliminary', scaling_factor=7)
-        else:
-            ax.xaxis.set_tick_params(top=False)
 
-        if (det_type!="multi"):
-            ax.set_legend_logo(position='upper left', logo_type = 'preliminary', scaling_factor=7)
+                for comp, info in components.items():
+                
+                    if (det_type!="sum" or ds==datasets[0]):
+                    
+                        hs[comp]=None
+
+                    ## loop over the contributions to h
+
+                    for name in info["hists"]:
 
 
-        #ax.grid(True, which='both', linestyle='-', linewidth=0.01)
-        #ax.minorticks_on()
+                        if get_originals==True:
+                            if name not in f[ds]["originals"]:
+                                #raise ValueError("PDF {} not in f[{}]".format(name,ds))
+                                continue
+                            if hs[comp] is None:
+                                hs[comp] = get_hist(f[ds]["originals"][name])
+                            else:
+                                hs[comp] += get_hist(f[ds]["originals"][name])
+                            
+                        else:
+                            if name not in f[ds]:
+                                #raise ValueError("PDF {} not in f[{}]".format(name,ds))
+                                continue
+                            if hs[comp] is None:
+                                hs[comp] = get_hist_rb(f[ds][name])
+                            else:
+                                hs[comp] += get_hist_rb(f[ds][name])
 
-        if (det_type=="multi"):
-            ax.set_xlabel("Energy (keV)")
-        ax.set_ylabel("Counts / 10 keV")
-        ax.set_yscale(scale)
-        ax.set_xlim(xlow,xhigh)
+                    
+            
+                    if hs[comp] is None:
+                        continue
+                    
+                    ### scale for bin width
+                    bin_widths = np.diff(hs[comp].axes.edges[0])
+                    
+                    if (det_type=="sum" and ds!=datasets[-1]):
+                        continue
+                    
+                    ### make the residual plot
+            
+                    if (comp=="data"):
+                        data=hs[comp].values()
+                        bins=hs[comp].axes.centers[0]
+                        bin_widths = np.diff(hs[comp].axes.edges[0])
+                    if (comp=="total_model"):
+                        pred=hs[comp].values()
+                        bin_widths = np.diff(hs[comp].axes.edges[0])
+
+                
+                    ### rescale bin contents
+                    for i in range(hs[comp].size - 2):
+                        E=hs[comp].axes.centers[0][i]
+                
+                        if hs[comp][i] == 0:
+                            hs[comp][i] = 1.05*ylowlim
+
+                        ### scale the value to be in units of cts/10 keV
+                        if (get_originals==False):
+                            hs[comp][i]*=10./bin_widths[i]
+                        
+                    
+                    hs[comp].plot(ax=ax, **style, **info["style"])
+                
+
+                ### ----------- save gamma lines info --------
+
+                ### if the peak belongs to a gamma line save it
+                low=4000
+                high=0
+                for i in range(hs["total_model"].size - 2):
+                    E=hs["total_model"].axes.centers[0][i]   
+                    bw=bin_widths[i]
+                    ### get first and last non-0 bin
+                   
+                    if ((hs["total_model"][i].value*bw/10>1.1*ylowlim) and (E<low)):
+                        low=E
+                    if ((hs["total_model"][i].value*bw/10>1.1*ylowlim) and (E>high)):
+                        high=E
+                    if (hs["total_model"][i].value*bw/10<1.1):
+                        continue
+                    bw = bin_widths[i] 
+                    ### loop over different gamma plots
+
+                    for plot_type,gamma_info in gamma_line_plots.items():
+                        for gamma_counter in range(len(gamma_info["lines"])):
+                            if ( (gamma_counter)<len(gamma_info["lines"]) and (abs(E-gamma_info["lines"][gamma_counter])<bin_widths[i]/2)):
+                                
+                                gamma_info["model"].append(hs["total_model"][i].value*bw/10)
+                                gamma_info["data"].append(hs["data"][i]*(bw)/10)
+
+                                gamma_info["names"].append("{}".format(str(gamma_info["lines"][gamma_counter])))
+                                gamma_info["count"]+=1
+
+                for plot_type,gamma_info in gamma_line_plots.items():
+                    gamma_info["groups"].append(gamma_info["count"])
+                
+                if (det_type=="sum" and ds!=datasets[-1]):
+                        continue
+                
+
+                ### compute residuals
+                if (get_originals==True):
+                    residual = np.array([((d - m) / (d ** 0.5)) if d > 0.5 else 0 for d, m in zip(data, pred)])
+                else:
+
+                    residual =[]
+                    for d,m,s in zip(data,pred,bin_widths):
+                        obs = d*s/10
+                        mu  = m*s/10
+                        resid = utils.normalized_poisson_residual(mu,obs)
+                        residual.append(resid)
+                    residual =np.array(residual)
+                
+                
+                masked_values = np.ma.masked_where((bins > xhigh)  | (bins < xlow), pred)
+                masked_values_data = np.ma.masked_where((bins > xhigh)  | (bins < xlow), data)
+
+                maxi = max(masked_values.max(),masked_values_data.max())
+                max_y = maxi+2*np.sqrt(maxi)+1
+
+                if (scale=="log"):
+                    max_y=20*max_y
+                else:
+                    max_y=1.3*max_y
+                    
+                ax.set_yscale("linear")
+                ax.set_ylim(bottom=ylowlim,top=max_y)
+                idx=0
+
+                ### add a shaded region
+                if (shade_regions==True):
+                    for region in regions.keys():
+                        range = regions[region]
+                        ax.fill_between(np.array([range[0],range[1]]),np.array([max_y,max_y]),
+                                        label=region,alpha=0.3,color=colors[idx],linewidth=0)
+                        idx+=1
+
+                ### show some excluded region (eg ROI)
+                if (exclude_range!=0):
+                    ax.fill_between(np.array([exclude_range[0],exclude_range[1]]),np.array([max_y,max_y]),
+                                        label="Not in fit",alpha=0.5,color="grey",linewidth=0)
+
+
+                ### annotate plot
+            
+                if ds == datasets[0] or det_type=="sum":
+                    legend=ax.legend(loc='upper right',edgecolor="black",frameon=True, facecolor='white',framealpha=1,ncol=1,fontsize=6
+                                     )
+                    ax.set_legend_annotation()
+
+                    
+                elif ds==datasets[len(datasets)-1]:
+                    ax.xaxis.set_tick_params(top=False)
+                    ax.set_legend_logo(position='upper right', logo_type = 'preliminary', scaling_factor=7)
+                else:
+                    ax.xaxis.set_tick_params(top=False)
+
+                ### annotate the type of fit
+                if (det_type!="multi"):
+                    ax.set_legend_logo(position='upper left', logo_type = 'preliminary', scaling_factor=8)
+                    
+                    ax.annotate("Fit of {} ".format(title),(0.3,0.91),xycoords="axes fraction",fontsize=10)
+                    
+
+
+                ## set labels
+
+                if (det_type=="multi"):
+                    ax.set_xlabel("Energy (keV)")
+                ax.set_ylabel("Counts / 10 keV")
+                ax.set_yscale(scale)
+                ax.set_xlim(xlow,xhigh)
+                
+
+                ### now plot the residual
+                if (det_type!="multi"):
+                    axes_full[1].axhspan(-3,3,color="red",alpha=0.5,linewidth=0)
+                    axes_full[1].axhspan(-2,2,color="gold",alpha=0.5,linewidth=0)
+                    axes_full[1].axhspan(-1,1,color="green",alpha=0.5,linewidth=0)
+
+                    axes_full[1].errorbar(bins,residual,fmt="o",color="black",markersize=0.5,linewidth=0.6)
+                    axes_full[1].set_xlabel("Energy (keV)")
+                    axes_full[1].set_ylabel("Residual")
+                    axes_full[1].set_yscale("linear")
+                    axes_full[1].set_xlim(xlow,xhigh)
+                
+                    axes_full[1].set_ylim(-6,6)
+                    if (exclude_range!=0):
+                        axes_full[1].fill_between(np.array([exclude_range[0],exclude_range[1]]),y1=np.array([-6,-6]),y2=np.array([6,6]),
+                                    alpha=0.5,color="grey",linewidth=0)
+                    axes_full[1].xaxis.set_tick_params(top=False)
+
+                    plt.tight_layout()
+
+
+        plt.tight_layout()
+        #pdf.savefig()
+        plt.show()
+
+
+
+    #### make the gamma line plot
+    ### ---------------------------------------------------------
+    for gamma,gamma_data in gamma_line_plots.items():
+            
+        gamma_line_data=gamma_data["data"]
+        gamma_line_model=gamma_data["model"]
+        gamma_index_groups=gamma_data["groups"]
+        hist_names=gamma_data["names"]
+        fig, axes_full = lps.subplots(2, 1, figsize=(width, y), sharex=True, gridspec_kw = { 'height_ratios': [8, 2],"hspace":0})
+        axes=axes_full[0]
+        gamma_hist =( Hist.new.Reg(len(gamma_line_data),0,len(gamma_line_data)).Double()
+                    )
+        gamma_hist_data =( Hist.new.Reg(len(gamma_line_model),0,len(gamma_line_model)).Double()
+                    )
         
+        for i in range(gamma_hist_data.size-2):
+            gamma_hist[i]=gamma_line_model[i]
+            gamma_hist_data[i]=gamma_line_data[i]
 
-        ### now plot the residual
-        if (det_type!="multi"):
-            #axes_full[1].grid(True, which='both', linestyle='--', linewidth=0.01)
-            #axes_full[1].minorticks_off()
-            axes_full[1].errorbar(bins,residual,yerr=np.ones(len(residual)),fmt="o",color=vset.blue,markersize=1,linewidth=0.6)
-            axes_full[1].axhline(y=0, color='black', linestyle='--', linewidth=1)
-            axes_full[1].set_xlabel("Energy (keV)")
-            axes_full[1].set_ylabel("Residual")
-            axes_full[1].set_yscale("linear")
-            axes_full[1].set_xlim(xlow,xhigh)
-          
-            axes_full[1].set_ylim(-6,6)
-            if (exclude_range!=0):
-                axes_full[1].fill_between(np.array([exclude_range[0],exclude_range[1]]),y1=np.array([-6,-6]),y2=np.array([6,6]),
-                               alpha=0.5,color="grey",linewidth=0)
-            axes_full[1].xaxis.set_tick_params(top=False)
+        ### now make the histos
+        gamma_hist_data.plot(ax=axes,**style,color=vset.blue,alpha=0.25,histtype="fill")
 
-            plt.tight_layout()
+        gamma_hist.plot(ax=axes,**style,color="black")
+        axes.set_xlim(0,len(gamma_line_data))
+        axes.set_ylabel("counts/10 keV")
+        axes.set_ylim(0.1,1.2*np.max(gamma_hist.values()))
+        axes.set_yscale("linear")
+        for x in gamma_index_groups:
+            axes.axvline(x=x,linewidth=0.4)
 
+        axes.set_xlabel("")
+        axes_full[1].set_xticks(np.arange(len(gamma_line_model))+0.5, hist_names,rotation=90,fontsize=10)
+        axes_full[1].set_ylabel("Residual")
+        axes_full[1].axhspan(-3,3,color="red",alpha=0.5,linewidth=0)
+        axes_full[1].axhspan(-2,2,color="gold",alpha=0.5,linewidth=0)
+        axes_full[1].axhspan(-1,1,color="green",alpha=0.5,linewidth=0)
 
-plt.tight_layout()
-#plt.show()
-plt.savefig("plots/fit_plots/{}_{}_{}_{}_to_{}_{}_{}.pdf".format(name_out,det_type,scale,xlow,xhigh,bin,comp_name))
-plt.show()
+        plt.tight_layout()
+        c=0
+        for d in type_names:
+            if (gamma_index_groups[c]!=gamma_index_groups[c+1]):
+                axes.annotate(d, ((1/len(gamma_line_model))*(gamma_index_groups[c]+gamma_index_groups[c+1]-0.5)/2, 0.91), xycoords="axes fraction", fontsize=8,ha="center")
+            c+=1
+        ### make a residuals
 
+        data = gamma_hist_data.values()
+        pred = gamma_hist.values()
+        rs=[]
+        for d,p in zip(data,pred):
+            rs.append(utils.normalized_poisson_residual(p,d))
+
+        rs=np.array(rs)
+        bins = gamma_hist.axes.centers[0]
+        axes_full[1].errorbar(bins,rs,fmt="o",color="black",markersize=0.5,linewidth=0.6)
+        axes_full[1].set_ylim(-max(4,max(abs(rs)))-1,max(4,max(abs(rs)))+1)
+
+        pdf.savefig()
+        plt.show()
