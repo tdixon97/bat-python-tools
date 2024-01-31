@@ -3,6 +3,7 @@ import pandas as pd
 import uproot
 import copy
 import hist
+import os
 import sys
 import math
 from legend_plot_style import LEGENDPlotStyle as lps
@@ -64,6 +65,7 @@ def manipulate_title(text:str):
         if (char=="#"):
             new_string+="$\\"
         
+    return new_string
 
 def format_latex(list_str):
     """Format a string as latex with the radioisotopes formatted"""
@@ -71,8 +73,8 @@ def format_latex(list_str):
     for text in list_str:
         modified_string =text.replace("Pb214", "$^{214}$Pb")
         modified_string =modified_string.replace("2vbb", "$2\\nu\\beta\\beta$")
-
-        modified_string=modified_string.replace("Bi214","Bi")
+        modified_string=modified_string.replace("Co60","$^{60}$Co")
+        modified_string=modified_string.replace("Bi214","$^{214}$Bi")
         modified_string=modified_string.replace("Tl208","$^{208}$Tl")
         modified_string=modified_string.replace("K40","$^{40}$K")
         modified_string=modified_string.replace("K42","$^{42}$K")
@@ -121,7 +123,7 @@ def ttree2df_all(filename:str,data:str)->pd.DataFrame:
 
     return df
 
-def ttree2df(filename:str,data:str,query=None,N=50000)->pd.DataFrame:
+def ttree2df(filename:str,data:str,query=None,N=500000)->pd.DataFrame:
     """Use uproot to import a TTree and save to a dataframe
     Parameters:
         - filename: file to open
@@ -249,6 +251,7 @@ def plot_correlation_matrix(corr_matrix:np.ndarray,title:str,save:str,show=False
         plt.close()
     else:
         plt.show()
+
 
 def plot_table(df,save):
     """ Plot a df as a table"""
@@ -380,7 +383,6 @@ def make_error_bar_plot(indexs,labels:list,y:np.ndarray,ylow:np.ndarray,yhigh:np
             axes.errorbar(y=xin+0.15*len(y)/30,x=y,xerr=[abs(ylow),abs(yhigh)],fmt="o",color=vset.blue,ecolor=vset.cyan,markersize=1,label="MC")
         else:
             if (split_priors):
-                print(len(xin1),len(y))
                 axes.errorbar(y=xin1,x=y,xerr=[abs(ylow),yhigh],fmt="o",color=vset.blue,ecolor=vset.cyan,markersize=1,
                             label="With prior")
                 axes.errorbar(y=xin2,x=y2,xerr=[abs(ylow2),yhigh2],fmt="o",color=vset.red,ecolor=vset.orange,markersize=1,
@@ -667,11 +669,11 @@ def get_efficiencies(cfg,spectrum,det_type,regions,pdf_path,name,spectrum_fit=""
                 warnings.warn("{}/{} not in MC PDFs".format(spectrum,det_type))
                 for key,region in regions.items():
                     effs[key][par]=0
+
         ### a formula not a file
         else:
             comps = comp["components"]
-            print("dt ",det_type)
-            print(comps)
+
             for name in comps:
                 formula = comps[name]["TFormula"]
 
@@ -681,15 +683,13 @@ def get_efficiencies(cfg,spectrum,det_type,regions,pdf_path,name,spectrum_fit=""
         
             split_values = formula.split(":")
             p0, p1 = map(float, split_values[1].split(","))
-            print(p0,p1)
             for key,region in regions.items():
                 eff =0
-                print(region)
                 for region_tmp in region:
 
                     eff+= p0*(region_tmp[1]-region_tmp[0])+p1*(region_tmp[1]*region_tmp[1]-region_tmp[0]*region_tmp[0])/2
-                print(key)
                 effs[key][par]=eff
+
                 if (det_type not in ["icpc","bege","ppc","coax"]):
                     effs[key][par]=0
 
@@ -829,8 +829,7 @@ def plot_relative_intensities_triptych(outputs,data,data_err,orders,title,savepa
         ratios_tmps=np.array(ratios_tmps)
         ratios.append(ratios_tmps)
     names=np.array(names)
-    print(names)
-    print(ratios[i])
+ 
     fig, axes = lps.subplots(1, 3,figsize=(6, 3.5), sharex=False, sharey=True,gridspec_kw = { "hspace":0})
 
     for i in range(len(outputs)):
@@ -985,6 +984,34 @@ def extract_prior(prior:str):
     return rv,high,(low_err,high_err)
 
 
+def parse_cfg(cfg_dict:dict)->(str,str,str,list,list,str):
+    """
+    Extract a bunch of information from the hmixfit cfg files
+    Parameters:
+        - cfg_dict: dictonary (cfg file for hmixfit)
+    Returns
+        - the fit name
+        - the output directory of fit results
+        - the list of detector types, 
+        - the ranges for each fit
+        - the name of the dataset
+    """
+
+    fit_name=cfg_dict["id"]
+    out_dir="../hmixfit/"+cfg_dict["output-dir"]
+    det_types=[]
+    ranges=[]
+    os.makedirs("plots/summary/{}".format(fit_name),exist_ok=True)
+
+    for key in cfg_dict["fit"]["theoretical-expectations"]:
+        for spec in cfg_dict["fit"]["theoretical-expectations"][key]:
+            det_types.append(spec)
+            ranges.append(cfg_dict["fit"]["theoretical-expectations"][key][spec]["fit-range"])
+        dataset_name =key[:-5]
+
+    dataset_name=dataset_name.replace("-","_").replace(".","_")
+
+    return fit_name,out_dir,det_types,ranges,dataset_name
 
 def plot_mc_no_save(axes,pdf,name="",linewidth=0.6,range=(0,4000)):
     
@@ -1341,7 +1368,7 @@ def number2name(meta:LegendMetadata,number:str)->str:
             return detector
     raise ValueError("Error detector {} does not have a name".format(number))
             
-def get_channel_floor(name:str,groups_path:str="level_groups.json")->str:
+def get_channel_floor(name:str,groups_path:str="cfg/level_groups_Sofia.json")->str:
     """Get the z group for the detector
     Parameters:
         name: (str) 
@@ -1434,43 +1461,45 @@ def get_exposure(group:list,periods:list=["p03","p04","p06","p07"])->float:
 
     meta = LegendMetadata("../legend-metadata")
 
-    bad_runs=[("p04","r006"),("p07","r000")]
-
+    with open("cfg/analysis_runs.json",'r') as file:
+        analysis_runs=json.load(file)
     ### also need the channel map
-    
+  
     groups_exposure=np.zeros(len(group))
 
     for period in periods:
 
+        if period not in analysis_runs.keys():
+            continue
         ## loop over runs
         for run,run_dict in meta.dataprod.runinfo[period].items():
             
             ## skip 'bad' runs
-            if ((period,run) in bad_runs):
-                continue
+            if ( run in analysis_runs[period]):
 
-      
-            ch = meta.channelmap(run_dict["cal"]["start_key"])
+                ch = meta.channelmap(run_dict["phy"]["start_key"])
 
-            for i in range(len(group)):
-                item =group[i]
+                for i in range(len(group)):
+                    item =group[i]
 
-                if item=="all":
-                    geds_list= [ _name for _name, _dict in ch.items() if ch[_name]["system"] == "geds" and ch[_name]["analysis"]["usability"] in ["on","no_psd"]]
-                elif ((item=="bege")or(item=="icpc")or (item=="coax")or (item=="ppc")):
-                    geds_list= [ _name for _name, _dict in ch.items() if ch[_name]["system"] == "geds" and ch[_name]["type"]==item and ch[_name]["analysis"]["usability"] in ["on","no_psd"]]
-                else:
-                    geds_list= [ _name for _name, _dict in ch.items() if ch[_name]["system"] == "geds" and f"ch{ch[_name]['daq']['rawid']}"==item and ch[_name]["analysis"]["usability"] in ["on","no_psd"]]
+                    if item=="all":
+                        geds_list= [ _name for _name, _dict in ch.items() if ch[_name]["system"] == "geds" and ch[_name]["analysis"]["usability"] in ["on","no_psd"]]
+                    elif ((item=="bege")or(item=="icpc")or (item=="coax")or (item=="ppc")):
+                        geds_list= [ _name for _name, _dict in ch.items() if ch[_name]["system"] == "geds" and ch[_name]["type"]==item and ch[_name]["analysis"]["usability"] in ["on","no_psd"]]
+                    else:
+                        geds_list= [ _name for _name, _dict in ch.items() if ch[_name]["system"] == "geds" and f"ch{ch[_name]['daq']['rawid']}"==item and ch[_name]["analysis"]["usability"] in ["on","no_psd"]]
 
 
-                ## loop over detectors
-                for det in geds_list:
-                    mass = ch[det].production.mass_in_g/1000
-                    if "phy" in run_dict:
-                        groups_exposure[i] += mass * (run_dict["phy"]["livetime_in_s"]/(60*60*24*365.25
-                                                                                        ))
-    
+                    ## loop over detectors
+                    for det in geds_list:
+                        mass = ch[det].production.mass_in_g/1000
+                        if "phy" in run_dict:
+                            groups_exposure[i] += mass * (run_dict["phy"]["livetime_in_s"]/(60*60*24*365.25
+                                                                                                ))
+   
     return np.sum(groups_exposure)
+
+
 
 def get_livetime(verbose:bool=True)->float:
     """ Get the livetime from the metadata
@@ -1483,8 +1512,8 @@ def get_livetime(verbose:bool=True)->float:
 
     meta = LegendMetadata("../legend-metadata")
 
-    bad_runs=[("p04","r006"),("p07","r000")]
- 
+    with open("cfg/analysis_runs.json",'r') as file:
+        analysis_runs=json.load(file) 
 
     taup=0
     vancouver=0
@@ -1497,11 +1526,11 @@ def get_livetime(verbose:bool=True)->float:
         for run in meta.dataprod.runinfo[period].keys():
             
             ## skip 'bad' runs
-            if ((period,run) in bad_runs):
-                continue
-            if "phy" in meta.dataprod.runinfo[period][run].keys():
-                time = meta.dataprod.runinfo[period][run]["phy"]["livetime_in_s"]
-                livetime_tot+=time
+            if (period in analysis_runs.keys() and run in analysis_runs[period]):
+
+                if "phy" in meta.dataprod.runinfo[period][run].keys():
+                    time = meta.dataprod.runinfo[period][run]["phy"]["livetime_in_s"]
+                    livetime_tot+=time
 
         ### sum the livetimes
         if (period=="p03" or period=="p04"):
@@ -1517,7 +1546,7 @@ def get_livetime(verbose:bool=True)->float:
     return vancouver
 
 
-def get_det_types(group_type:str,string_sel:int=None,det_type_sel:str=None,level_groups:str="level_groups.json")->(dict,str,list):
+def get_det_types(group_type:str,string_sel:int=None,det_type_sel:str=None,level_groups:str="cfg/level_groups_Sofia.json")->(dict,str,list):
     """
     Extract a dictonary of detectors in each group
 
