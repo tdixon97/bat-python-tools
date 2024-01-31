@@ -10,6 +10,8 @@ import tol_colors as tc
 from hist import Hist
 import hist
 import argparse
+import os
+import sys
 import re
 import utils
 import json
@@ -27,61 +29,58 @@ style = {
 
 
 
+##### the old set of arguments
+##### --------------------------------------------------------------------------------
 
 parser = argparse.ArgumentParser(description='A script with command-line argument.')
-parser.add_argument('-d','--det_type', type=str, help='The detector type either by_type,multi, all, sum or a particular spectrum (icpc etc)',default='all')
-parser.add_argument('-D','--det_types', type=str, help='Comma seperated list of detector types like icpc,bege etc')
-parser.add_argument('-N','--type_names', type=str, help='Comma seperated list of fit spectrum names')
-parser.add_argument('-l','--lower_x', type=str, help='Low range to display',default=565)
-parser.add_argument('-u','--upper_x', type=str, help='Upper range to display',default=3000)
-parser.add_argument("-s","--scale",type=str,help="Scale either log or linear",default="log")
-parser.add_argument("-o","--out_file",type=str,help="file with the histograms from the fit",default="../hmixfit/results/hmixfit-l200a-taup-silver-dataset-m1-histograms.root")
-parser.add_argument("-c","--components",type=str,help="json components config file path",default="components.json")
-parser.add_argument("-b","--bins",type=int,help="Binning to use",default=15)
+parser.add_argument("-C","--components",type=str,help="json components config file path",default="cfg/components.json")
 parser.add_argument("-r","--regions",type=int,help="Shade regions on the plot",default=0)
-parser.add_argument("-f","--fit_name",type=str,help="fit name",default="l200a_vancouver23_dataset_v0_1")
 parser.add_argument("-w","--width",type=int,help="width for canvas",default=7)
+parser.add_argument("-a","--save",type=int,help="save the output (1) or print (0)",default=1)
+parser.add_argument("-c","--config",type=str,help="hmixfit configuration file for the fit")
+
+
 
 #TODO:
 #1) make the code figure out fit name automatically
 ### read the arguments
 
 
-args = parser.parse_args()
-det_type=args.det_type
-det_types = utils.csv_string_to_list(args.det_types,str)
-type_names = utils.csv_string_to_list(args.type_names,str)
 
-print(det_types)
-xlows=utils.csv_string_to_list(args.lower_x)
-xhighs=utils.csv_string_to_list(args.upper_x)
-ylowlim =0.01
-scale=args.scale
-outfile=args.out_file
-first_index =utils.find_and_capture(outfile,"hmixfit-")
-name_out = outfile[first_index:-16]
-fit_name = args.fit_name
+args = parser.parse_args()
+cfg = args.config
+
+with open(cfg,"r") as json_file:
+    cfg_dict =json.load(json_file)
+
+### extract all we need from the cfg dict
+fit_name,out_dir,det_types,ranges,dataset_name=utils.parse_cfg(cfg_dict)
+outfile = out_dir+"/hmixfit-"+fit_name+"/histograms.root"
+
+## could replace with nicer format
+type_names=[d.replace("mul_surv","M1").replace("mul2_surv","M2").replace("cat","").replace("/","").replace("sum","s") for d in det_types]
+
+
+
 json_file =args.components
-bin = args.bins
-exclude_range=(1450,1540)
+
 exclude_range=0
 width=args.width
 comp_name = json_file[:-5]
 shade_regions=args.regions
+save = bool(args.save)
+ylowlim =0.01
 
 regions={"$2\\nu\\beta\\beta$":(800,1300),
          "K40":(1455,1465),
-         "K42":(1520,1530),
-         "Tl compton":(1900,2500),
+         "K42":(1520,1530),         "Tl compton":(1900,2500),
          "Tl peak":(2600,2630)
          }
 colors=[vset.red,vset.orange,vset.magenta,vset.teal,"grey"]
 
-get_originals=True
+get_originals=False
 
 ### options to run this code
-
-
 
 #### creat the gamma lines plots
 ### ---------------------------
@@ -114,7 +113,6 @@ gamma_line_plots={
     }
 
 }
-gamma_line_plots={}
 
 
 with open(json_file, 'r') as file:
@@ -126,22 +124,19 @@ def get_hist(obj):
 def get_hist_rb(obj):
     return obj.to_hist()
 
-
-
 ### save to one PDF
-with PdfPages("plots/fit_plots/{}_{}_{}_{}_{}.pdf".format(name_out,det_type,scale,bin,comp_name)) as pdf:
+with PdfPages("plots/summary/{}/fit_reconstructions.pdf".format(fit_name)) as pdf:
     
     ## loop over detector type
-    for det_type,type_name,xlow,xhigh in zip(det_types,type_names,xlows,xhighs):
+    for det_type,type_name,fit_range in zip(det_types,type_names,ranges):
+        xlow=fit_range[0]
+        xhigh=fit_range[1]
         gamma_counter=0
 
-        if det_type=="multi" or det_type =="sum":
-            datasets = ["{}_bege".format(fit_name), "{}_icpc".format(fit_name),"{}_ppc".format(fit_name),"{}_coax".format(fit_name)]
-            labels = ["BEGe detectors after QC", "ICPC detectors after QC","PPC detectors after QC","COAX detectors after QC"]
-        else:
-            datasets=["{}_{}".format(fit_name,det_type)]
-            labels=[type_name]
-                
+
+        datasets=["{}_{}".format(dataset_name,det_type.split("/")[1])]
+        labels=[type_name]
+            
         ## set height of histo
         y=4
         if det_type!="multi":
@@ -301,13 +296,6 @@ with PdfPages("plots/fit_plots/{}_{}_{}_{}_{}.pdf".format(name_out,det_type,scal
                 maxi = max(masked_values.max(),masked_values_data.max())
                 max_y = maxi+2*np.sqrt(maxi)+1
 
-                if (scale=="log"):
-                    max_y=20*max_y
-                else:
-                    max_y=1.3*max_y
-                    
-                ax.set_yscale("linear")
-                ax.set_ylim(bottom=ylowlim,top=max_y)
                 idx=0
 
                 ### add a shaded region
@@ -351,7 +339,6 @@ with PdfPages("plots/fit_plots/{}_{}_{}_{}_{}.pdf".format(name_out,det_type,scal
                 if (det_type=="multi"):
                     ax.set_xlabel("Energy (keV)")
                 ax.set_ylabel("Counts / 10 keV")
-                ax.set_yscale(scale)
                 ax.set_xlim(xlow,xhigh)
                 
 
@@ -361,7 +348,7 @@ with PdfPages("plots/fit_plots/{}_{}_{}_{}_{}.pdf".format(name_out,det_type,scal
                     axes_full[1].axhspan(-2,2,color="gold",alpha=0.5,linewidth=0)
                     axes_full[1].axhspan(-1,1,color="green",alpha=0.5,linewidth=0)
 
-                    axes_full[1].errorbar(bins,residual,fmt="o",color="black",markersize=0.5,linewidth=0.6)
+                    axes_full[1].errorbar(bins,residual,fmt="o",color="black",markersize=0.8,linewidth=0.6)
                     axes_full[1].set_xlabel("Energy (keV)")
                     axes_full[1].set_ylabel("Residual")
                     axes_full[1].set_yscale("linear")
@@ -377,8 +364,19 @@ with PdfPages("plots/fit_plots/{}_{}_{}_{}_{}.pdf".format(name_out,det_type,scal
 
 
         plt.tight_layout()
-        #pdf.savefig()
-        plt.show()
+        for scale in ["log","linear"]:
+
+            if (scale=="log"):
+                max_y_p=20*max_y
+            else:
+                max_y_p=1.3*max_y
+                
+            ax.set_yscale(scale)
+            ax.set_ylim(bottom=ylowlim,top=max_y_p)
+            if (save):
+                pdf.savefig()
+            else:
+                plt.show()
 
 
 
@@ -423,7 +421,7 @@ with PdfPages("plots/fit_plots/{}_{}_{}_{}_{}.pdf".format(name_out,det_type,scal
         c=0
         for d in type_names:
             if (gamma_index_groups[c]!=gamma_index_groups[c+1]):
-                axes.annotate(d, ((1/len(gamma_line_model))*(gamma_index_groups[c]+gamma_index_groups[c+1]-0.5)/2, 0.91), xycoords="axes fraction", fontsize=8,ha="center")
+                axes.annotate(de, ((1/len(gamma_line_model))*(gamma_index_groups[c]+gamma_index_groups[c+1])/2, 0.91), xycoords="axes fraction", fontsize=6,ha="center")
             c+=1
         ### make a residuals
 
@@ -435,8 +433,10 @@ with PdfPages("plots/fit_plots/{}_{}_{}_{}_{}.pdf".format(name_out,det_type,scal
 
         rs=np.array(rs)
         bins = gamma_hist.axes.centers[0]
-        axes_full[1].errorbar(bins,rs,fmt="o",color="black",markersize=0.5,linewidth=0.6)
+        axes_full[1].errorbar(bins,rs,fmt="o",color="black",markersize=1,linewidth=1)
         axes_full[1].set_ylim(-max(4,max(abs(rs)))-1,max(4,max(abs(rs)))+1)
-
-        pdf.savefig()
-        plt.show()
+        
+        if (save):
+            pdf.savefig()
+        else:
+            plt.show()
