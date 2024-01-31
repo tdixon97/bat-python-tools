@@ -3,6 +3,7 @@
 Author: Toby Dixon (toby.dixon.23@ucl.ac.uk)
 
 The tools can be divided into three groups.
+
 #### Plotting fit outout
 Several scripts have been created for the preparation of the fit.
 
@@ -34,3 +35,6 @@ Finally some scripts perform a similar (and related) analysis of gamma line rati
 - 'lar-survival-prob.py'
 
 Most of the methods used for all the steps are contained in the python module 'utils'.
+
+### Outputs/ Inputs
+Configuration files (JSON) for the code is stored in '/cfg/' with plots in '/plots/'
