@@ -22,6 +22,11 @@ We created a script "examples.sh" which enables you to produce a standard set of
 
 All have some help to explain the arguments to control the program. In general the scripts are run just using the path to the cfg file used to run the script.
 
+'filter_mcmc.c' is the only ROOT / c++ code, it should be compiled with:
+`g++ -std=c++0x filter_mcmc.c -o filter_mcmc `root-config  --cflags --glibs``
+and run according to the instructions.
+
+
 ##### Fit preparation
 Several scripts have been created for the preparation of the fit.
 
