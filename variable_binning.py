@@ -9,6 +9,8 @@
 
 import re
 import pandas as pd
+from iminuit import Minuit, cost
+
 import uproot
 import copy
 import hist
@@ -160,21 +162,80 @@ def compute_binning(gamma_energies=np.array([583,609,911,1460,1525,1764,2204,261
                 stop=True
           
     return bin_edges
+
 def remove_duplicates(bin_edges):
     return np.unique(bin_edges)
+
+def reso_curve(x,a,b):
+    return np.sqrt(a+x*b)
+
+def M2_reso_analysis(json_path:str="gamma_line_output/M2_resolutions_p3_p7_20240131.json",
+                     json_path_M1:str="gamma_line_output/M1_resolutions_p3_p7_20240131.json"
+                     ):
+    """Analysis of the M2 resolutions for M2 events"""
+
+
+    with open(json_path, 'r') as json_file:
+        M2_reso =json.load(json_file)
+
+
+    with open(json_path_M1, 'r') as json_file:
+        M1_reso =json.load(json_file)
+
+    specs=["M2_E1_raw","M2_E2_raw"]
+    fig, axes= lps.subplots(1, 1,figsize=(3, 4), sharex=True, gridspec_kw = { "hspace":0})
+    peaks=["583","609","1764","2615"]
+    cs=[vset.teal,vset.blue,vset.orange]
+    x=[]
+    y=[]
+    el=[]
+    eh=[]
+    for idx,spec in enumerate(specs):
+       
+        for key in M2_reso[spec]:
+            if (key not in peaks):
+                continue
+            
+            x.append(float(key))
+            y.append(M2_reso[spec][key]["FWHM"])
+            eh.append(M2_reso[spec][key]["mode_to_q84"])
+            el.append(M2_reso[spec][key]["mode_to_q16"])
+        if (idx==0):
+            continue
+        axes.errorbar(np.array(x)+2*idx,y,yerr=[el,eh],color=cs[idx],fmt="o",label="M2 data",linewidth=0.5,markersize=2)
+        axes.set_xlabel("Energy [keV]")
+        axes.set_ylabel("Reso FWHM [keV]")
+        xi=np.linspace(3000,0,100)
+        a=M1_reso["All"]["a"]
+        b=M1_reso["All"]["b"]
+        axes.plot(xi,np.sqrt(a+b*xi),color=vset.red,linestyle="--",label="M1 resolution curve")
+        axes.set_xlim(0,3000)
+        axes.set_ylim(0,5)
+
+    x=np.array(x)
+    y=np.array(y)
+    eh=np.array(eh)
+    el=np.array(el)
+    ### make the fit
+    likelihood=utils.create_graph_likelihood(reso_curve,x,y,el,eh)
+    guess=(1,0.001)
+    m = Minuit(likelihood, *guess)
+    m.limits[0]=(0,5)
+    m.limits[1]=(0,0.1)
+    m.migrad()
+    axes.plot(xi,np.sqrt(m.values[0]+m.values[1]*xi),color=vset.teal,linestyle="--",label=f"Fit to M2")
+    print(m)
+    m.minos()
+    print(m)
+    axes.legend()
+
+    plt.show()
+
 def main():
 
 
     ## at some point read these files
-    """
-            gamma_search = "gamma_line_output/peaksearch_v02_p3467_Raw_All_500keV_2625keV_1keVbin.csv"
-    gammas = pd.read_csv(gamma_search,delimiter=";")
-    cut=3
-    gammas_sel=gammas[gammas["Significance"]>cut]
-    list_tmp=[]
-    for id, row in gammas.iterrows():
-        if (row["Significance"]<cut and len(list_tmp)!=0):
-    """
+    
     gammas = np.array([511, 583, 609, 727, 835, 911, 969, 1120, 1173, 1378, 1461, 1525, 1588, 1730, 1765, 2104, 2119, 2204, 2448, 2615])
     bin_edges=compute_binning(gamma_energies=gammas,low_energy=500,high_energy=4000,gamma_binning_low=6,gamma_binning_high=10,cont_binning=20)
     bin_edges_coax=compute_binning(gamma_energies=gammas,low_energy=500,high_energy=4000,gamma_binning_low=15,gamma_binning_high=15,cont_binning=20)
@@ -257,4 +318,5 @@ def main():
 
     pass
 if __name__ == "__main__":
-    main()
+    #main()
+    M2_reso_analysis()

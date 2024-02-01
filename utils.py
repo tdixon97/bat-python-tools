@@ -754,6 +754,20 @@ def create_efficiency_likelihood(data_surv,data_cut):
     return likelihood
 
 
+def create_graph_likelihood(func,x,y,el,eh):
+
+    def likelihood(*pars):
+        logL=0
+
+        logLs=(func(x,*pars)>y)*(- np.power((func(x,*pars) -y),2) / (2*eh))
+        logLs+=(func(x,*pars)<=y)*(- np.power((func(x,*pars) -y),2) / (2*el))
+        logL = sum(logLs)
+
+        return -logL
+
+    return likelihood
+
+
 def create_counting_likelihood(data,bins):
     """Create the likelihood function"""
 
@@ -1234,6 +1248,7 @@ def get_pdf_and_norm(path,spectrum="mul_surv",det_type="all",r=(0,4000),b=10):
     else:
         raise ValueError("Error: {}/{} not in {}".format(spectrum,det_type,path))
     return hist,N
+
 
 def get_counts_minuit(counts,energies):
     """A basic counting analysis implemented in Minuit"""
