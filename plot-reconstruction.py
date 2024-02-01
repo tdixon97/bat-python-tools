@@ -1,3 +1,8 @@
+"""
+A script to plot the fit reconstruction of the LEGEND / hmixfit background model
+Author: Toby Dixon (toby.dixon.23@ucl.ac.uk) but based on a script from Luigi Pertoldi.
+"""
+
 from legend_plot_style import LEGENDPlotStyle as lps
 lps.use('legend')
 
