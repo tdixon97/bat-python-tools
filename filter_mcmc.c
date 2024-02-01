@@ -9,8 +9,8 @@
 
 void filter_mcmc(TString path){
 
-   TFile *f1 = new TFile(path+".root");
-
+   TFile *f1 = new TFile(path);
+   path.Remove(path.Length()-5);
    // Get the key name
    TIter nextkey(f1->GetListOfKeys());
    TKey *key;
@@ -45,7 +45,7 @@ int main(int argc, char* argv[]) {
    TString * path=nullptr;
    int opt;
 
-   while ((opt = getopt(argc, argv, "fh:")) != -1) {
+   while ((opt = getopt(argc, argv, "f:h")) != -1) {
         switch (opt) {
             case 'h':
                 usage();
