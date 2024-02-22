@@ -12,10 +12,10 @@ Several scripts have been created for the preparation of the fit.
 
 Some others produce plots of the outputs:
 
-- 'plot-taup.py' : Plots the fit reconstruction itself
+- 'plot-reconstruction.py' : Plots the fit reconstruction itself
 - 'plot-activities.py' :  Plots the fit parameters
 - 'plot-correlation.py': Plots the correlation matrix and correlation plots for parameters
-- 'analyse-counts-per-region.py': Projects the model onto different space
+- 'plot-projections.py': Projects the model onto different space
 - 'filter_mcmc.c': Reduces the size of the output so that python can read it.
 
 We created a script "examples.sh" which enables you to produce a standard set of example plots.
@@ -23,6 +23,7 @@ We created a script "examples.sh" which enables you to produce a standard set of
 All have some help to explain the arguments to control the program. In general the scripts are run just using the path to the cfg file used to run the script.
 
 'filter_mcmc.c' is the only ROOT / c++ code, it should be compiled with:
+
 `g++ -std=c++0x filter_mcmc.c -o filter_mcmc `root-config  --cflags --glibs``
 and run according to the instructions.
 
