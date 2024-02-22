@@ -7,6 +7,7 @@ import os
 import sys
 import math
 from legend_plot_style import LEGENDPlotStyle as lps
+from warnings import simplefilter 
 from datetime import datetime, timezone
 from scipy.stats import poisson
 from scipy.stats import norm
@@ -24,6 +25,28 @@ from scipy.stats import truncnorm
 from matplotlib.backends.backend_pdf import PdfPages
 from numba import jit
 
+
+def get_list_of_directories(file):
+    """ Get the list of directories inside a root file
+    Parameters:
+        - the file object from uproot
+    Returns:
+        - a list of str of directories
+    """
+
+    directories = [key for key in file.keys() if isinstance(file[key], uproot.reading.ReadOnlyDirectory)]
+    return directories
+
+def get_list_of_not_directories(file):
+    """ Get the list of directories inside a root file
+    Parameters:
+        - the file oject from uproot
+    Returns:
+        - a list of objects (not directory) in the file
+    """
+
+    not_directories = [key for key in file.keys() if not isinstance(file[key], uproot.reading.ReadOnlyDirectory)]
+    return not_directories
 
 def csv_string_to_list(value:str,data_type:type=int)->list:
     """
@@ -56,7 +79,12 @@ def find_and_capture(text:str, pattern:str):
         raise ValueError("pattern {} not found in text {} ".format(pattern,text))
     
 def manipulate_title(text:str):
-    """Replace all the # with \  and add $ $"""
+    """Replace all the # with \  and add $ $
+    Parameters:
+        - text (str) of the text to manipulate
+    Returns:
+        - the manipulated text
+    """
 
     
     new_string=""
@@ -67,8 +95,18 @@ def manipulate_title(text:str):
         
     return new_string
 
-def format_latex(list_str):
-    """Format a string as latex with the radioisotopes formatted"""
+def format_latex(list_str:list):
+    """
+    Format a string as latex with the radioisotopes formatted
+    Parameters
+        - list_str : a list of strings
+    Returns
+        - a list of formatted strings
+    
+    Example:
+        >>> format_latex(["Pb214])
+        >>> [$^{214}$Pb]
+    """
     list_new=[]
     for text in list_str:
         modified_string =text.replace("Pb214", "$^{214}$Pb")
@@ -92,10 +130,10 @@ def ttree2df_all(filename:str,data:str)->pd.DataFrame:
         - filename: file to open
         - tree_name: Which TTree to look at
     Returns:
-        Pandas DataFrame of the data
+        - Pandas DataFrame of the data
     """
 
-    file = uproot.open(filename)
+    file = uproot.open(filename,object_cache=None)
 
     # Access the TTree inside the file
     tree =None
@@ -123,16 +161,20 @@ def ttree2df_all(filename:str,data:str)->pd.DataFrame:
 
     return df
 
-def ttree2df(filename:str,data:str,query=None,N=500000)->pd.DataFrame:
-    """Use uproot to import a TTree and save to a dataframe
+def ttree2df(filename:str,data:str,query:str=None,N:int=500000)->pd.DataFrame:
+    """
+    Use uproot to import a TTree and save to a dataframe only reads a subset defined by the query and N
+    To read all a dataframe instead use tree2df_all
     Parameters:
         - filename: file to open
         - tree_name: Which TTree to look at
+        - query: str of a selection to make (default None)
+        - N number of events to read (default: 50000)
     Returns:
         Pandas DataFrame of the data
     """
 
-    file = uproot.open(filename)
+    file = uproot.open(filename,object_cache=None)
 
     # Access the TTree inside the file
     tree =None
@@ -223,12 +265,15 @@ def plot_two_dim(varx:np.ndarray,vary:np.ndarray,rangex:tuple,rangey:tuple,title
 
     return correlation_coefficient
 
-def plot_correlation_matrix(corr_matrix:np.ndarray,title:str,save:str,show=False):
+def plot_correlation_matrix(corr_matrix:np.ndarray,title:str,pdf,show=False):
     """
     Plots a correlation matrix 
 
     Parameters:
     - corr_matrix (numpy.ndarray): 2D NumPy array representing the correlation matrix.
+    - title (str): title for the plot
+    - pdf: PdfPages object to save the plot
+    - show: boolean to show (True) or Save (false) the plot
     """
 
     # Set up the matplotlib figure
@@ -245,7 +290,7 @@ def plot_correlation_matrix(corr_matrix:np.ndarray,title:str,save:str,show=False
     cbar.set_label('$\\rho$')
     plt.grid()
     # Show the plot
-    plt.savefig(save)
+    pdf.savefig()
     
     if (show==False):
         plt.close()
@@ -253,10 +298,14 @@ def plot_correlation_matrix(corr_matrix:np.ndarray,title:str,save:str,show=False
         plt.show()
 
 
-def plot_table(df,save):
-    """ Plot a df as a table"""
+def plot_table(df,pdf):
+    """ 
+    Plot a df as a table
+    Parameters:
+        -df: pandas dataframe to plot
+        -pdf:PdfPages object to save output 
+    """
     # Create a DataFrame
-
 
     # Plot a table
     fig, ax = plt.subplots(figsize=(2, 6*len(df.values)/29))  # Adjust the figsize as needed
@@ -277,11 +326,19 @@ def plot_table(df,save):
     table.set_zorder(100)
     
     # Show the plot
-    plt.savefig(save)
+    pdf.savefig()
     plt.close()
     
 
 def twoD_slice(matrix,index):
+    """
+    Function to make a slicing of a matrix
+    Parameters:
+        - matrix (np.ndarray) of the correaltion matrix
+        - index: the indexs to select
+    Returns:
+        - new sliced np.ndarray
+    """
     index=np.array(index)
     matrix_new=matrix[:,index]
     matrix_new = matrix_new[index,:]
@@ -290,6 +347,13 @@ def twoD_slice(matrix,index):
 def get_nth_largest(matrix,n):
     """
     Get the nth largest element in the matrix and its index
+    Parameters:
+        - matrix: np.ndarray
+        - n: the number of elements to extract
+    Returns:
+        - the values for the n-largest elements
+        - the row indices
+        - the column indices
     """
     sort_m=matrix
     for i in range(matrix.shape[0]):
@@ -303,7 +367,12 @@ def get_nth_largest(matrix,n):
     
     return sort_m[row_indices,col_indices],row_indices,col_indices
 
-def plot_corr(df,i,j,labels,save,pdf=None):
+def plot_corr(df:pd.DataFrame,i:int,j:int,labels:list,pdf=None):
+    """
+    Makes a 2D correalation plot
+    Parameters:
+
+    """
     key1=df.keys()[i]
     key2=df.keys()[j]
     x=np.array(df[key1])
@@ -314,13 +383,123 @@ def plot_corr(df,i,j,labels,save,pdf=None):
         
     cor=plot_two_dim(x,y,rangex,rangey,"{} [1/yr]".format(labels[i]),
                                                     "{} [1/yr]".format(labels[j]),
-                                                    "{} vs {}".format(labels[i],labels[j]),bins,True,save,pdf=pdf)
+                                                    "{} vs {}".format(labels[i],labels[j]),bins,True,pdf=pdf)
     
+
+
+
+
+
+def get_data_numpy(type_plot:str,df_tot:pd.DataFrame,name:str)->tuple[np.ndarray,np.ndarray,np.ndarray,np.ndarray,float]:
+    """
+    Get the data from the dataframe into some numpy arrays:
+    Parameters:
+        - type_plot (str): The type of data to extract (parameter,scaling_factor,fit_range or bi_range)
+        - df_tot (pd.DataFrame) a pandas dataframe of the data
+        - name (str): The type of data (M1,M2,all or a particular spectrum name)
+    Returns:
+        - a numpy array of the x (indexs)
+        - a numpy array of the y data (activity)
+        - numpy arrays of y (activity) low/high errors
+        - a norm factor for assay measurments
+    """
+    if (type_plot=="parameter"):
+
+        x,y,y_low,y_high=get_from_df(df_tot,"fit_range",label="_{}".format(name))
+        norm = np.array(df_tot["fit_range_orig_{}".format(name)])
+        x=x/norm
+        y=y/norm
+        y_low=y_low/norm
+        y_high=y_high/norm
+        assay_norm=1
+    elif (type_plot=="scaling_factor"):
+        x,y,y_low,y_high=get_from_df(df_tot,"scaling_factor")
+        assay_norm=1
+
+    elif (type_plot=="fit_range" or type_plot=="bi_range"):
+
+        x,y,y_low,y_high=get_from_df(df_tot,type_plot,label="_"+name)
+        norm = np.array(df_tot["{}_orig_{}".format(type_plot,name)])
+        assay_norm=norm
+    else:
+        raise ValueError("Error type plot must be 'parameter', 'scaling_factor', 'fit_range' or 'bi_range'")
+    
+    return x,y,abs(y_low),abs(y_high),assay_norm
+
+def get_df_results(trees:list,dataset_name:str,specs:list,outfile:str)->pd.DataFrame:
+    """
+    Get the fit results into a dataframe merging the different spectrums
+    Parameters:
+        -trees (list): A list of TTrees in the analysis file (corresponding to spectra in the fit)
+        -dataset_name (str): The name of the fitted dataset
+        -specs (list): List of spectra for the fit
+        -outfile (str):Path to the analysis file
+    Returns:
+        -pd.DataFrame combining the results
+
+    """
+    firstM1=True
+    firstM2=True
+    idx=0
+    for tree in trees:
+        ## get spectrum name and multiplicity
+        ## ---------------------------------
+        index = tree.find(dataset_name)
+        print(tree)
+        print(dataset_name)
+        if index != -1:  
+            spec_name = tree[index +1+len(dataset_name):].split(";")[0]
+            multi_string = [string for string in specs if spec_name in string]
+            print(multi_string)
+            if (len(multi_string)!=1):
+                raise ValueError("Error we have multiple spectrum per dataset in the out file")
+            else:
+                multi=multi_string[0].split("/")[0]
+        else:
+            raise ValueError("Key in the file doesnt contain the data pattern ")
+    
+
+        df =pd.DataFrame(ttree2df_all(outfile,tree))
+        df=df[df["fit_range_orig"]!=0]
+
+        ### add total range (M1 and M2)
+        ### ------------------------------------------
+        for key in df.keys():
+            if ("range" in key):
+                df[key+"_all_spec"]=df[key]
+
+        if (multi=="mul_surv"):
+            for key in df.keys():
+                if (("range" in key) and ("all" not in key)):
+                    df[key+"_M1"]=df[key]
+            firstM1=False
+        elif ("mul2" in multi):
+            for key in df.keys():
+                if ("range" in key) and  ("all" not in key):
+                    df[key+"_M2"]=df[key]
+            firstM2=False
+        
+        for key in df.keys():
+            if ("range" in key) and ("M2" not in key) and ("M1" not in key) and ("all" not in key):
+                df.rename(columns={key: key+"_"+spec_name}, inplace=True)
+        
+        ### merge dataframes
+
+        if idx==0:
+            df_tot = df
+        else:
+
+            ### append info in an appropriate 
+            df_tot=merge_dfs(df_tot,df)
+        idx=idx+1
+    
+    return df_tot
 
 
 def make_error_bar_plot(indexs,labels:list,y:np.ndarray,ylow:np.ndarray,yhigh:np.ndarray,data="all",name_out=None,obj="parameter",
                         y2=None,ylow2=None,yhigh2=None,label1=None,label2=None,extra=None,do_comp=0,low=0.1,scale="log",upper=0,
-                        save_path ="plots/fit_results/fit_results",show=False,pdf=None,data_band =None,categories=None,split_priors=False
+                        data_band =None,categories=None,split_priors=False,has_prior=None,
+                        assay_mean=None,assay_high=None,assay_low=None
                         ):
     """
     Make the error bar plot
@@ -330,43 +509,62 @@ def make_error_bar_plot(indexs,labels:list,y:np.ndarray,ylow:np.ndarray,yhigh:np
     labels=np.array(labels)
     y=y[indexs]
     labels=labels[indexs]
-    print(len(y),len(labels))
     ylow=ylow[indexs]
     yhigh=yhigh[indexs]
 
+    if (assay_mean is not None):
+        assay_mean=assay_mean[indexs]
+        assay_high=assay_high[indexs]
+        assay_low=assay_low[indexs]
+
+    if (split_priors==True):
+        has_prior=np.array(has_prior,dtype="bool")[indexs]
+
+        index_prior=np.where(has_prior)[0]
+        index_no_prior=np.where(~has_prior)[0]
+    
     if (do_comp==True):
-        
         ylow2=ylow2[indexs]
         yhigh2=yhigh2[indexs]
         y2=y2[indexs]
 
-    height= 2+4*len(y)/29
-    fig, axes = lps.subplots(1, 1, figsize=(6,2.5), sharex=True, gridspec_kw = {'hspace': 0})
-
+    
     ### get the indexs with prior and those without priors
     ### ------------------------------------------------------------
     xin=np.arange(len(labels))
-    index_prior=[]
-    index_no_prior=[]
- 
 
+    height= 1+len(y)*0.32
+    lps.use("legend")
+    fig, axes = lps.subplots(1, 1, figsize=(4.5,4), sharex=True, gridspec_kw = {'hspace': 0})
+
+    ### get the priors
+    ### ----------------------------------------------
+
+    if (split_priors==True and has_prior is None):
+        raise ValueError("Splitting by those component with priors requires to set 'has_prior'")
+
+    ### shorten labels
+    print(labels)
     for i in range(len(labels)):
         label = labels[i]
-        if ("cables" in label) or ("pen" in label) or ("sipm" in label) or ("insulator" in label):
-            index_prior.append(True)
-            index_no_prior.append(False)
-        else:
-            index_prior.append(False)
-            index_no_prior.append(True)
 
+        ### shorten 
+        if "hpge_support_copper" in label:
+            labels[i]=labels[i].split("hpge")[0]+"hpge_copper"
+        if "front" in label:
+            labels[i]=labels[i].split("front")[0]+"fe_electr"
+        if "hpge_in" in label:
+            labels[i]=labels[i].split("hpge")[0]+"insulators"
 
     ### split into contributions with and without priors
-    if (split_priors):
-        index_prior=np.array(index_prior)
-        index_no_prior=np.array(index_no_prior)
-        yo=y
-        ylowo=ylow
-        yhigho=yhigh
+
+    if (split_priors==True):
+        if (do_comp==True):
+            raise NotImplementedError("It is not implemented to both split priors and compare 2 fits")
+        
+        yo=np.array(y)
+        ylowo=np.array(ylow)
+        yhigho=np.array(yhigh)
 
         y=yo[index_prior]
         ylow=ylowo[index_prior]
@@ -376,21 +574,32 @@ def make_error_bar_plot(indexs,labels:list,y:np.ndarray,ylow:np.ndarray,yhigh:np
         yhigh2=yhigho[index_no_prior]
         xin1=xin[index_prior]
         xin2=xin[index_no_prior]
-  
+    
     ### either split by category or not
     if categories is None:
+
+        if (assay_mean is not None):
+            axes.errorbar(y=xin,x=assay_mean,fmt="o",color="black",ecolor="grey",markersize=1,label="Radioassy",alpha=0.4)
+            for i in range(len(xin)):
+              
+                axes.fill_betweenx([xin[i] - 0.2, xin[i] + 0.2], assay_mean[i]-assay_low[i] , assay_mean[i]+assay_high[i], alpha=0.4, color='gray',linewidth=0)
+
+
+
         if (do_comp==False and split_priors==False):
-            axes.errorbar(y=xin+0.15*len(y)/30,x=y,xerr=[abs(ylow),abs(yhigh)],fmt="o",color=vset.blue,ecolor=vset.cyan,markersize=1,label="MC")
+            axes.errorbar(y=xin,x=y,xerr=[abs(ylow),abs(yhigh)],fmt="o",color=vset.blue,ecolor=vset.cyan,markersize=1,label="MC")
+            #a=1
         else:
-            if (split_priors):
+            if (split_priors==True):
                 axes.errorbar(y=xin1,x=y,xerr=[abs(ylow),yhigh],fmt="o",color=vset.blue,ecolor=vset.cyan,markersize=1,
                             label="With prior")
-                axes.errorbar(y=xin2,x=y2,xerr=[abs(ylow2),yhigh2],fmt="o",color=vset.red,ecolor=vset.orange,markersize=1,
+                axes.errorbar(y=xin2,x=y2,xerr=[abs(ylow2),abs(yhigh2)],fmt="o",color=vset.red,ecolor=vset.orange,markersize=1,
                             label="Without prior")
             else:
-                axes.errorbar(y=xin+0.15*len(y)/30,x=y,xerr=[ylow,yhigh],fmt="o",color=vset.blue,ecolor=vset.cyan,markersize=1,label=label1)
-                axes.errorbar(y=xin-0.15*len(y)/30,x=y2,xerr=[ylow2,yhigh2],fmt="o",color=vset.orange,ecolor=vset.magenta,markersize=1,label=label2)
-                
+                axes.errorbar(y=xin+0.15*len(y)/30,x=y,xerr=[abs(ylow),abs(yhigh)],fmt="o",color=vset.blue,ecolor=vset.cyan,markersize=1,label=label1)
+                axes.errorbar(y=xin-0.15*len(y)/30,x=y2,xerr=[abs(ylow2),abs(yhigh2)],fmt="o",color=vset.orange,ecolor=vset.magenta,markersize=1,label=label2)
+
+
     else:
         if (do_comp==True):
             raise ValueError("Splitting by category not implemented for comparison")
@@ -404,68 +613,75 @@ def make_error_bar_plot(indexs,labels:list,y:np.ndarray,ylow:np.ndarray,yhigh:np
         yhigh=yhigh[cat_sort]
         colors=[vset.blue,vset.teal,vset.magenta,vset.cyan]
         for cat,col in zip(sorted(set(categories)),colors):
+            print(cat,col)
             y_tmp = y[categories==cat]
             ylow_tmp = ylow[categories==cat]
             yhigh_tmp = yhigh[categories==cat]
             xin_tmp = xin[categories==cat]
             axes.errorbar(y=xin_tmp,x=y_tmp,xerr=[ylow_tmp,yhigh_tmp],fmt="o",color=col,ecolor=col,markersize=1,label=cat)
 
-
+    print("Done")
     ### add a band of the data           
     if data_band is not None:
         axes.axvline(x=data_band[0], color='red', linestyle='--', label='Data')
-
         axes.axvspan(xmin=data_band[0]-data_band[1],xmax=data_band[0]+data_band[2], color=vset.orange, alpha=0.3)
 
+    ### set upper limits for plots
     if (upper==0):
-        upper = np.max(y+1.5*yhigh)
+        if (scale=="linear"):
+            if (len(y)>0):
+                upper = np.max(y+1.5*yhigh)
+        else:
+            if (len(y)>0):
+                upper = np.max(y+1.5*yhigh)
+
         if (do_comp==True or split_priors==True):
-            upper=max(upper,np.max(y2+1.5*yhigh2))
-            
+            upper=max(3*upper,3*np.max(y2+1.5*yhigh2))
+
+
+
     axes.set_yticks(xin, labels)
 
+    ## draw data band
     if (data_band is not None):
         upper =data_band[0]+7*data_band[2]
+
+
+    ### set the labels
+    ### -------------------------
     if (obj=="fit_range"):
-        axes.set_xlabel("Oberved counts / yr in {} data".format(data))
-        axes.set_xlim(0.1,upper)
+        axes.set_xlabel("Reconstructed counts / yr in {} data".format(data))
+        axes.set_xlim(1,upper)
 
     elif (obj=="bi_range"):
-        axes.set_xlabel("Observed bkg counts / yr in {} data".format(data))
+        axes.set_xlabel("Reconstructed bkg counts / yr in {} data".format(data))
         axes.set_xlim(low,upper)
     elif (obj=="scaling_factor"):
         axes.set_xlabel("Scaling factor [1/yr] ")
         axes.set_xlim(1E-7,upper)
     elif obj=="parameter":
-        axes.set_xlabel("Decays / yr [1/yr]")
+        axes.set_xlabel("Activity [$\mu$Bq]")
         axes.set_xlim(low,upper)
- 
+    else:
+        axes.set_xlabel("Reconstructed counts / yr in {} data".format(obj))
+        axes.set_xlim(1,upper)
+
     axes.set_yticks(axes.get_yticks())
-    axes.set_yticklabels([val for val in labels], fontsize=11)
+    fonti=11
+    length=len(y)
+    if (y2 is not None):
+        length+=len(y2)
+
+    if (length>15 and do_comp==False):
+        fonti=4
+    axes.set_yticklabels([val for val in labels],fontsize=fonti)
     axes.set_xscale(scale)
 
     plt.grid()
     if (do_comp==True or split_priors==True or data_band is not None or categories is not None):
         leg=axes.legend(loc='best',edgecolor="black",frameon=True, facecolor='white',framealpha=1)
         leg.set_zorder(10)    
-
-    #plt.show()
-    if (do_comp==True):
-        name_out="comp_{}_to_{}_{}".format(label1,label2,extra)
-   
-
-    if (pdf is None):
-        if (obj!="scaling_factor"):     
-            plt.savefig("{}_{}_{}_{}.pdf".format(save_path,data,obj,name_out))
-        else:
-            plt.savefig("{}_{}_{}.pdf".format(save_path,obj,name_out))
-    else:
-        pdf.savefig()
-
-    if (show==True):
-        plt.show()
-    else:
-        plt.close()
+ 
 
 def replace_e_notation(my_string):
     # Using regular expression to match e+0n where n is any character
@@ -557,12 +773,17 @@ def get_index_by_type(names):
     return {"U":index_U,"2nu":index_2nu,"Th":index_Th,"K":index_K}
 
 
-def get_from_df(df,obj):
+def get_from_df(df,obj,label=""):
     """Get the index, y and errors from dataframe"""
+   
     x=np.array(df.index)
-    y=np.array(df["{}_marg_mod".format(obj)])
-    y_low = y-np.array(df["{}_qt16".format(obj)])
-    y_high=np.array(df["{}_qt84".format(obj)])-y
+    if ("{}_marg_mod{}".format(obj,label) in df):
+        mode="mod"
+    else:
+        mode="mode"
+    y=np.array(df["{}_marg_{}{}".format(obj,mode,label)])
+    y_low = y-np.array(df["{}_qt16{}".format(obj,label)])
+    y_high=np.array(df["{}_qt84{}".format(obj,label)])-y
     for i in range(len(y_low)):
         if (y_low[i]<0):
             y_low[i]=0
@@ -608,7 +829,7 @@ def get_total_efficiency(det_types,cfg,spectrum,regions,pdf_path,det_sel="all",m
 def get_efficiencies(cfg,spectrum,det_type,regions,pdf_path,name,spectrum_fit="",mc_list=None,type_fit="icpc"):
     """ Get the efficiencies"""
 
-    if (det_type in ["icpc","ppc","coax","bege"]):
+    if (det_type in ["icpc","ppc","coax","bege"] and type_fit!="all"):
         type_fit=det_type
 
     effs={}
@@ -620,18 +841,19 @@ def get_efficiencies(cfg,spectrum,det_type,regions,pdf_path,name,spectrum_fit=""
 
     if mc_list is None:
         for key,region in regions.items():
-            effs[key]["2vbb_bege"]=0
-            effs[key]["2vbb_coax"]=0
-            effs[key]["2vbb_ppc"]=0
-            effs[key]["2vbb_icpc"]=0
-            effs[key]["K42_hpge_surface_bege"]=0
-            effs[key]["K42_hpge_surface_coax"]=0
-            effs[key]["K42_hpge_surface_ppc"]=0
-            effs[key]["K42_hpge_surface_icpc"]=0
-            effs[key]["alpha_ppc"]=0
-            effs[key]["alpha_bege"]=0
-            effs[key]["alpha_coax"]=0
-            effs[key]["alpha_icpc"]=0
+            if (type_fit!="all"):
+                effs[key]["2vbb_bege"]=0
+                effs[key]["2vbb_coax"]=0
+                effs[key]["2vbb_ppc"]=0
+                effs[key]["2vbb_icpc"]=0
+                effs[key]["K42_hpge_surface_bege"]=0
+                effs[key]["K42_hpge_surface_coax"]=0
+                effs[key]["K42_hpge_surface_ppc"]=0
+                effs[key]["K42_hpge_surface_icpc"]=0
+                effs[key]["alpha_ppc"]=0
+                effs[key]["alpha_bege"]=0
+                effs[key]["alpha_coax"]=0
+                effs[key]["alpha_icpc"]=0
         for key in cfg["fit"]["theoretical-expectations"].keys():
             if ".root" in key:
                 filename = key
@@ -653,22 +875,22 @@ def get_efficiencies(cfg,spectrum,det_type,regions,pdf_path,name,spectrum_fit=""
         ## now open the file
       
         if "root-file" in comp.keys():
-            file = uproot.open(pdf_path+comp["root-file"])
             
-            if "{}/{}".format(spectrum,det_type) in file:
-                hist = file["{}/{}".format(spectrum,det_type)]
-                N  = int(file["number_of_primaries"])
-                hist = hist.to_hist()
-                for key,region in regions.items():
-                    eff=0
-                    for region_tmp in region:
-                        eff+=float(integrate_hist(hist,region_tmp[0],region_tmp[1]))
-                    effs[key][par]=eff/N
-            else:
+            with uproot.open(pdf_path+comp["root-file"],object_cache=None) as file:
+                if "{}/{}".format(spectrum,det_type) in file:
+                    hist = file["{}/{}".format(spectrum,det_type)]
+                    N  = int(file["number_of_primaries"])
+                    hist = hist.to_hist()
+                    for key,region in regions.items():
+                        eff=0
+                        for region_tmp in region:
+                            eff+=float(integrate_hist(hist,region_tmp[0],region_tmp[1]))
+                        effs[key][par]=eff/N
+                else:
 
-                warnings.warn("{}/{} not in MC PDFs".format(spectrum,det_type))
-                for key,region in regions.items():
-                    effs[key][par]=0
+                    warnings.warn("{}/{} not in MC PDFs".format(spectrum,det_type))
+                    for key,region in regions.items():
+                        effs[key][par]=0
 
         ### a formula not a file
         else:
@@ -696,12 +918,20 @@ def get_efficiencies(cfg,spectrum,det_type,regions,pdf_path,name,spectrum_fit=""
     return effs,1
    
 
-def sum_effs(eff1,eff2):
-    """ Sum the two efficiency dictonaries"""
+def sum_effs(eff1:dict,eff2:dict)->dict:
+    """ 
+    Function to sum the two efficiency dictonaries up to two layers
+    
+    Parameters:
+        - eff1: (dict) the first dictonary
+        - eff2: (dict) the second
+    Returns:
+        - dictonary where every item with the same key is summed
+    """
 
 
     dict_sum={}
-
+    print(eff1,eff2)
     for key in set(eff1) | set(eff2):  # Union of keys from both dictionaries
 
         ## sum two layers
@@ -717,9 +947,19 @@ def sum_effs(eff1,eff2):
             dict_sum[key]= eff1.get(key, 0) + eff2.get(key, 0)
     return dict_sum
 
-def get_data_counts_total(spectrum,det_types,regions,file,det_sel="all",
-                          key_list=["full","2nu","Tlcompton","Tlpeak","K40","K42"]):
-
+def get_data_counts_total(spectrum:str,det_types:dict,regions:dict,file:str,det_sel:str=None,key_list=[]):
+    """
+    Function to get the data counts in different regions
+    Parameters:
+        - spectrum:  the data spectrum to use (str)
+        - det_types: the dictonary of detector types
+        - regions:   the dictonary of regions
+        - file   :   str path to the file
+        - det_sel : a particular detector type (def None)
+    Returns:
+        - a dictonary of the counts in each region
+    
+    """
     data_counts_total ={}
     for det_name,det_info in det_types.items():
 
@@ -727,21 +967,41 @@ def get_data_counts_total(spectrum,det_types,regions,file,det_sel="all",
         dt=det_info["types"]
         data_counts={}
         for key in key_list:
-            data_counts[key]=0 
+            data_counts[key]=0
+
         for det,type in zip(det_list,dt):
-            if (type==det_sel or det_sel=="all"):
+          
+            if (type==det_sel or det_sel==None):
                 data_counts = sum_effs(data_counts,get_data_counts(spectrum,det,regions,file))
 
         data_counts_total[det_name]=data_counts
-
+    print(data_counts_total)
     return data_counts_total
 
 
-def create_efficiency_likelihood(data_surv,data_cut):
-    """Create the likelihood function"""
+def create_efficiency_likelihood(data_surv:np.ndarray,data_cut:np.ndarray):
+    """
+    A method to create the efficiency likelihood,
+    This makes the likelihood function to mimimize based on a list of data_surving and being cut (counts in each bin)
+    Parameters:
+        - data_surv: np.ndarray of the counts in each bin survivin
+        - data_cut: np.ndarray of the counts in each bin being cut
+    Returns:
+        - the likelihood as python exectuable
+    """
 
-    def likelihood(Ns,Nb,eff_s,eff_b):
-        """The likelihood function"""
+    def likelihood(Ns:float,Nb:float,eff_s:float,eff_b:float):
+        """
+        The likelihood function itself, based on 4 parameters
+        This is a sum over the likelihood for the cut and surviving spectrum
+        Parameters:
+        - Ns the number of signal counts
+        - Nb the number of bkg
+        - eff_s the efficiency for signal
+        - eff_b the efficiency for background
+        Returns:
+        - negative log likelihood P(D|theta)
+        """
 
         logL=0
         preds_surv =np.array([Nb*eff_b,Nb*eff_b+Ns*eff_s,Nb*eff_b])
@@ -755,7 +1015,10 @@ def create_efficiency_likelihood(data_surv,data_cut):
 
 
 def create_graph_likelihood(func,x,y,el,eh):
+    """
+    Method to create the likelihood to fit a graph
 
+    """
     def likelihood(*pars):
         logL=0
 
@@ -868,21 +1131,29 @@ def plot_relative_intensities(outputs,data,data_err,orders,title,savepath,no_lab
     vset = tc.tol_cset('vibrant')
 
     ratios=[]
-
+    errors=[]
     names=[]
     for component in orders:
         ratio_tmp = outputs[component]
+        rt = ratio_tmp
+        if isinstance(rt,tuple):
+            ratio_tmp=rt[0]
+            error=rt[1]
+        else:
+            ratio_tmp=rt
+            error=0
         ratios.append(ratio_tmp)
+        
         names.append(component)
-     
+        errors.append(error)
     ratios=np.array(ratios)
     names=np.array(names)
-    print(names)
 
     fig, axes = lps.subplots(1, 1,figsize=(3, 3), sharex=True, gridspec_kw = { "hspace":0})
-    axes.set_xlim(0,10+max(max(ratios),data+data_err))
+    axes.set_xlim(0,1.3*max(max(ratios),data+data_err))
     axes.set_title(title,fontsize=14)
-    axes.errorbar(ratios,names,color=vset.blue,fmt="o",label="MC")
+
+    axes.errorbar(ratios,names,xerr=[errors,errors],color=vset.blue,fmt="o",label="MC")
     axes.set_xlabel("Relative Intensity [%]")
     axes.set_yticks(np.arange(len(names)),names,rotation=0,fontsize=7)
     axes.axvline(x=data,color=vset.red,label="data")
@@ -964,7 +1235,15 @@ def plot_eff_calc(energies,data_surv,data_cut,values):
 def extract_prior(prior:str):
     """
     Extracts the prior as a sccipy object (only works for Gauss or Expon)
-    
+    Parameters
+    -------------------
+        - a string of the prior as used in hmixfit
+    Returns:
+    -------------------
+        - scipy random variable of the probability distribution
+        - an upper limit on the parameter (5 sigma) used more for plotting
+        - the lower error on the activity (sigma)
+        - the upper error on the activity (sigma)
     """
 
     #gaussian prior
@@ -989,7 +1268,7 @@ def extract_prior(prior:str):
             rv= expon(scale=upper_limit/2.3)
             high = 2*upper_limit
             low_err=0
-            high_err= upper_limit
+            high_err= upper_limit/1.65
         else:
             raise ValueError("exp prior doesnt contain the part /UpperLimit) needed")
     else:
@@ -998,11 +1277,63 @@ def extract_prior(prior:str):
     return rv,high,(low_err,high_err)
 
 
-def parse_cfg(cfg_dict:dict)->(str,str,str,list,list,str):
+
+def merge_dfs(df1,df2):
+
+    simplefilter(action="ignore", category=pd.errors.PerformanceWarning)
+    missing_columns_df1 = df2.columns.difference(df1.columns)
+    missing_columns_df2 = df1.columns.difference(df2.columns)
+
+
+    ### add appropriate columns
+    for col in missing_columns_df1:
+        df1[col] = 0
+
+    for col in missing_columns_df2:
+        df2[col] = 0
+    ### now handle different rows
+        
+    unique_keys_df1 = set(df1['comp_name'])
+    unique_keys_df2 = set(df2['comp_name'])
+   
+    missing_rows_df1 = df2[df2['comp_name'].isin(unique_keys_df2 - unique_keys_df1)]
+    missing_rows_df2 = df1[df1['comp_name'].isin(unique_keys_df1 - unique_keys_df2)]
+    
+    for index, row in missing_rows_df1.iterrows():
+        columns_to_zero = [col for col in row.index if 'range' in col]
+        row[columns_to_zero] = 0   
+        df1 = pd.concat([df1, pd.DataFrame([row])], ignore_index=True)
+
+    for index, row in missing_rows_df2.iterrows():
+        columns_to_zero = [col for col in row.index if 'range' in col]
+        row[columns_to_zero] = 0
+        
+        df2 = pd.concat([df2, pd.DataFrame([row])], ignore_index=True)
+    
+    result = pd.DataFrame(columns=df1.columns)
+    df2=df2.sort_values(by="comp_name").reset_index(drop=True)
+    df1=df1.sort_values(by="comp_name").reset_index(drop=True)
+ 
+    for col in df1.columns:
+        # Check if the column contains "range"
+        if 'range' in col:
+            # Add corresponding values from both DataFrames
+            result[col] = df1[col] + df2[col]
+        else:
+            # Check if values are the same and take value from the first DataFrame
+            if not (df1[col] == df2[col]).all() and not np.allclose(df1[col].to_numpy(),df2[col].to_numpy()):
+                raise ValueError(f"Values in column '{col}' '{df1[col]}' '{df2[col]}' do not match between the two DataFrames.")
+            result[col] = df1[col]
+
+
+    return result
+
+def parse_cfg(cfg_dict:dict,replace_dash:bool=True)->tuple[str,str,str,list,list,str]:
     """
     Extract a bunch of information from the hmixfit cfg files
     Parameters:
         - cfg_dict: dictonary (cfg file for hmixfit)
+        - replace dash: bool to replace dashes in the datset name
     Returns
         - the fit name
         - the output directory of fit results
@@ -1020,32 +1351,36 @@ def parse_cfg(cfg_dict:dict)->(str,str,str,list,list,str):
     for key in cfg_dict["fit"]["theoretical-expectations"]:
         for spec in cfg_dict["fit"]["theoretical-expectations"][key]:
             det_types.append(spec)
-            ranges.append(cfg_dict["fit"]["theoretical-expectations"][key][spec]["fit-range"])
-        dataset_name =key[:-5]
+            if 'fit-range' in cfg_dict["fit"]["theoretical-expectations"][key][spec]:
+                ranges.append(cfg_dict["fit"]["theoretical-expectations"][key][spec]["fit-range"])
+            elif 'fit-range-y' in cfg_dict["fit"]["theoretical-expectations"][key][spec]:
+                                ranges.append(cfg_dict["fit"]["theoretical-expectations"][key][spec]["fit-range-y"])
 
-    dataset_name=dataset_name.replace("-","_").replace(".","_")
+        dataset_name =key[:-5]
+    if (replace_dash):
+        dataset_name=dataset_name.replace("-","_").replace(".","_")
 
     return fit_name,out_dir,det_types,ranges,dataset_name
 
-def plot_mc_no_save(axes,pdf,name="",linewidth=0.6,range=(0,4000)):
+def plot_mc_no_save(axes,pdf,name="",linewidth=0.6,range=(0,4000),color="blue"):
     
     axes.set_xlabel("Energy [keV]")
     axes.set_ylabel("counts/10 keV")
 
     axes.set_yscale("linear")
     axes.set_xlim(range)
-    pdf.plot(ax=axes, linewidth=linewidth, yerr=False,flow= None,histtype="step",label=name,color="blue")
+    pdf.plot(ax=axes, linewidth=linewidth, yerr=False,flow= None,histtype="step",label=name,color=color)
     #pdf.plot(ax=axes, linewidth=0.8, yerr=False,flow= None,histtype="fill",alpha=0.15)
 
     return axes
 
-def compare_mc(max_energy,pdfs,decay,order,norm_peak,pdf,xlow,xhigh,scale,linewidth=0.6):
+def compare_mc(max_energy,pdfs,decay,order,norm_peak,pdf,xlow,xhigh,scale,linewidth=0.6,colors=[]):
     """Compare MC files"""
     fig, axes = lps.subplots(1, 1,figsize=(6, 4), sharex=True, gridspec_kw = { "hspace":0})
     max_c=0
     axes.set_xlim(xlow,xhigh)
 
-    for name in order:
+    for idx,name in enumerate(order):
  
         Peak_counts =pdfs[decay+"_"+name][norm_peak]
 
@@ -1054,7 +1389,7 @@ def compare_mc(max_energy,pdfs,decay,order,norm_peak,pdf,xlow,xhigh,scale,linewi
         if (pdf_norm[max_energy]>max_c):
             max_c= pdf_norm[max_energy]
  
-        axes=plot_mc_no_save(axes,pdf_norm,name=name,linewidth=linewidth)
+        axes=plot_mc_no_save(axes,pdf_norm,name=name,linewidth=linewidth,color=colors[idx])
         
     axes.legend(loc='best',edgecolor="black",frameon=True, facecolor='white',framealpha=1,fontsize=8)    
     axes.set_xlim(xlow,xhigh)
@@ -1108,16 +1443,17 @@ def plot_N_Mc(pdfs,labels,name,save_pdf,data,range_x,range_y,scale,colors):
     axes.set_yscale(scale)
     axes.set_xlim(range_x)
     axes.set_ylim(range_y)
+
     if (data is not None):
         data.plot(ax=axes,yerr=False,flow=None,histtype="fill",alpha=0.3,label="Data",color=vset.blue)
     for pdf,c,l in zip(pdfs,colors,labels):
-        pdf.plot(ax=axes, linewidth=.6,color=c,yerr=False,flow= None,histtype="step",label=l)
+        pdf.plot(ax=axes,linewidth=.6,color=c,yerr=False,flow= None,histtype="step",label=l)
    
 
     axes.legend(loc='best',edgecolor="black",frameon=True, facecolor='white',framealpha=1)    
 
     save_pdf.savefig()
-
+    #plt.show()
 
 def plot_mc(pdf,name,save_pdf,data=None,range_x=(500,4000),range_y=(0.01,5000),pdf2=None,scale="log",label=""):
     """Plot the MC files"""
@@ -1141,7 +1477,7 @@ def plot_mc(pdf,name,save_pdf,data=None,range_x=(500,4000),range_y=(0.01,5000),p
 
     save_pdf.savefig()
 
-    plt.close()
+    #plt.close()
 
 def vals2hist(vals,hist):
     for i in range(hist.size - 2):
@@ -1187,6 +1523,7 @@ def slow_convolve(priors,pdfs,rvs,n_samp=10000):
 
 def plot_pdf(rv,high,samples=np.array([]),pdf_obj=None,name=""):
     """ Plot the PDF and optionally some samples"""
+
     vset = tc.tol_cset('vibrant')
 
     fig, axes = lps.subplots(1, 1,figsize=(5, 4), sharex=True, gridspec_kw = { "hspace":0})
@@ -1217,14 +1554,23 @@ def scale_hist(hist,scale):
 
     return hist_scale
 
-def get_hist(obj,range=(132,4195),bins=10):
+def get_hist(obj,range:tuple=(132,4195),bins:int=10):
+    """
+    Extract the histogram (hist package object) from the uproot histogram
+    Parameters:
+        - obj: the uproot histogram 
+        - range: (tuple): the range of bins to select (in keV)
+        - bins (int): the (constant) rebinning to apply
+    Returns:
+        - hist
+    """
     return obj.to_hist()[range[0]:range[1]][hist.rebin(bins)]
 
 
 def get_data(path,spectrum="mul_surv",det_type="all",r=(0,4000),b=10):
     """Get the histogram (PDF) and the number of simulated primaries (with uproot)"""
 
-    file = uproot.open(path)
+    file = uproot.open(path,object_cache=None)
         
     if "{}/{}".format(spectrum,det_type) in file:
         hist = file["{}/{}".format(spectrum,det_type)]
@@ -1238,7 +1584,7 @@ def get_data(path,spectrum="mul_surv",det_type="all",r=(0,4000),b=10):
 def get_pdf_and_norm(path,spectrum="mul_surv",det_type="all",r=(0,4000),b=10):
     """Get the histogram (PDF) and the number of simulated primaries (with uproot)"""
 
-    file = uproot.open(path)
+    file = uproot.open(path,object_cache=None)
         
     if "{}/{}".format(spectrum,det_type) in file:
         hist = file["{}/{}".format(spectrum,det_type)]
@@ -1250,8 +1596,20 @@ def get_pdf_and_norm(path,spectrum="mul_surv",det_type="all",r=(0,4000),b=10):
     return hist,N
 
 
-def get_counts_minuit(counts,energies):
-    """A basic counting analysis implemented in Minuit"""
+def get_counts_minuit(counts:np.ndarray,energies:np.ndarray):
+    """
+    A basic counting analysis implemented in Minuit, this implements a 3 bin counting analysis
+    Parameters:
+        - counts (np.ndarray): a numpy array of the counts -must have 3 elements
+        - energies (np.ndarray): an array of the bin edges - must have 4 elements
+    Returns:
+        -(best fit number of counts, low error, high error)
+    """
+    if (len(counts)!=3):
+        raise ValueError("Counts array must have 3 element")
+    if (len(energies)!=4):
+        raise ValueError("Energies array must have 3 element")
+    
     cost = create_counting_likelihood(counts,np.diff(energies))
     bins=np.diff(energies)
     Ns_guess = abs(counts[1]-bins[1]*counts[0]/bins[0])+10
@@ -1270,22 +1628,31 @@ def get_counts_minuit(counts,energies):
     else:
         elow = m.errors["Ns"]
         ehigh=m.errors["Ns"]
-    #plot_counting_calc(energies,counts,m.values)
 
     return m.values["Ns"],elow,ehigh
 
-def get_peak_counts(peak,name_peak,data_file,livetime=1,spec="mul_surv",size=5):
-    """Get the counts in a peak in the data"""
+def get_peak_counts(peak:float,name_peak:str,data_file:str,livetime:float=1,spec:str="mul_surv",size:float=5):
+    """Get the counts in a peak in the data, it uses a basic counting analysis with minuit.
+    Parameters:
+        - peak: (float) the energy of the peak
+        - name_peak (str) the name of the peak
+        - data_file (str): the file of the data
+        - livetime (float) detector livetime
+        - spec (str): spectrum to look for the peak in (default mul_surv)
+        - size (float): the size of the center region (half)
+    Returns
+        - (count rate, low error and high error) - all divided by livetime
+    """
 
-    regions = {name_peak:(peak-size,peak+size)}
-    left_sideband ={name_peak:(peak-3*size,peak-size)}
-    right_sideband ={name_peak:(peak+size,peak+3*size)}
+    regions = {name_peak:[[peak-size,peak+size]]}
+    left_sideband ={name_peak:[[peak-3*size,peak-size]]}
+    right_sideband ={name_peak:[[peak+size,peak+3*size]]}
 
     det_types,name,Ns = get_det_types("all")
 
     #print(json.dumps(det_types,indent=1))
-    energies= np.array([left_sideband[name_peak][0],left_sideband[name_peak][1],
-                        regions[name_peak][1],right_sideband[name_peak][1]])
+    energies= np.array([left_sideband[name_peak][0][0],left_sideband[name_peak][0][1],
+                        regions[name_peak][0][1],right_sideband[name_peak][0][1]])
 
     data_counts = get_data_counts_total(spec,det_types,regions,data_file,key_list=[name_peak])
     data_counts_right = get_data_counts_total(spec,det_types,right_sideband,data_file,key_list=[name_peak])
@@ -1293,7 +1660,6 @@ def get_peak_counts(peak,name_peak,data_file,livetime=1,spec="mul_surv",size=5):
 
     ### the efficiency calculation
     counts,low,high=get_counts_minuit(np.array([data_counts_left["all"][name_peak],data_counts["all"][name_peak],data_counts_right["all"][name_peak]]),
-                    
                     energies
                         )
     
@@ -1348,15 +1714,26 @@ def get_data_counts(spectrum,det_type,regions,file):
     return data_counts
 
 
-def name2number(meta,name:str):
-    """Get the channel number given the name"""
+def name2number(meta:LegendMetadata,name:str):
+    """
+    Function to get the channel number given the name.
+    Parameters:
+        meta (LegendMetadata): An object containing metadata information.
+        name (str): The channel name to be converted to a channel number
+    Returns:
+        str: The channel numeber corresponding to the provided channel name
+
+    Raises:
+        ValueError: If the provided channel name does not correspond to any detector number
+    
+    
+    """
 
     meta = LegendMetadata("../legend-metadata")
 
     chmap = meta.channelmap(datetime.now())
 
     if name in chmap:
-
         return f"ch{chmap[name].daq.rawid:07}"
     else:
         raise ValueError("Error detector {} does not have a number ".format(name))
@@ -1383,6 +1760,7 @@ def number2name(meta:LegendMetadata,number:str)->str:
             return detector
     raise ValueError("Error detector {} does not have a name".format(number))
             
+
 def get_channel_floor(name:str,groups_path:str="cfg/level_groups_Sofia.json")->str:
     """Get the z group for the detector
     Parameters:
@@ -1463,6 +1841,7 @@ def get_channels_map():
         string_types[string]=channels_types
 
     return string_channels,string_types
+
 
 def get_exposure(group:list,periods:list=["p03","p04","p06","p07"])->float:
     """
@@ -1587,6 +1966,7 @@ def get_det_types(group_type:str,string_sel:int=None,det_type_sel:str=None,level
 
     Example:
         det_info, selected_det_type, selected_det = get_det_types("sum")
+    Raises:
     """
 
 
@@ -1674,8 +2054,16 @@ def get_det_types(group_type:str,string_sel:int=None,det_type_sel:str=None,level
 
     return det_types,namet,Ns
 
-def select_region(histo,cuts=[]):
-    """Select a region of the histo"""
+def select_region(histo,cuts:list=[]):
+    """
+    Function to select a region of the histo
+    Parameters:
+        - histo: hist histogram object
+        - cuts (list) a list of cuts each of which are dictonaries
+    Returns:
+        - histogram with the cut applied
+    
+    """
     histo_out=copy.deepcopy(histo)
     energy_2 = histo_out.axes.centers[0]
     energy_1 = histo_out.axes.centers[1]
@@ -1712,6 +2100,8 @@ def select_region(histo,cuts=[]):
     for i in range(len(histo_out.axes.centers[0])):
         for j in range(len(histo_out.axes.centers[1])):
             histo_out[i,j]=w_new[i,j]
+    del histo
+    
     return histo_out
 
 
@@ -1721,42 +2111,33 @@ def project_sum(histo):
         If you want a proper summed histo you should build it directly from the raw data
     """
     w,x,y=histo.to_numpy()
-    
+
     hist_energy_sum =( Hist.new.Reg(int((len(x)-2)*2)+2, 0, x[-1]+y[-1]).Double())
   
     rows, cols = w.shape
 
-    # Create an array of indices for each element
     indices = np.arange(rows) + np.arange(cols)[:, None]
   
-    # Use numpy's bincount to calculate diagonal sums
     diagonal_sums = np.bincount(indices.flatten(), weights=w.flatten())
  
     for i in range(hist_energy_sum.size-3):
         hist_energy_sum[i]+=diagonal_sums[i]
-  
+    
     return hist_energy_sum
 
 
 
 def fast_variable_rebinning(x, y, weights, edges_x, edges_y):
-    # Determine the bin indices for each (x, y) pair
 
     indices_x = np.searchsorted(edges_x, x[0:-1]+0.1) - 1
     indices_y = np.searchsorted(edges_y, y[0:-1]+0.1) - 1
     
-    flat_indices = indices_x[:, np.newaxis] * len(edges_y) + indices_y
-    #flat_indices=((indices_x+1)[:,np.newaxis]*(indices_y+1)-1)
-    fig, axes = lps.subplots(1, 1, figsize=(5,3), sharex=True, gridspec_kw = {'hspace': 0})
-    
+    flat_indices = indices_x[:, np.newaxis] * len(edges_y) + indices_y    
     flat_indices=flat_indices.flatten()
    
-
-    # Calculate the total number of bins
     num_bins_x = len(edges_x) 
     num_bins_y = len(edges_y) 
     
-    # Create a 2D histogram using bin indices and weights
     hist = np.zeros((num_bins_x, num_bins_y)).flatten()
 
     np.add.at(hist, flat_indices, weights.flatten())
@@ -1784,9 +2165,7 @@ def variable_rebin(histo,edges):
 
 def variable_rebin_2D(histo,edges_x,edges_y):
     histo_var =( Hist.new.Variable(edges_x).Variable(edges_y).Double())
-    print(histo.axes.centers)
-    print(histo.values())
-    print(np.hstack(histo.axes.centers[0]))
+  
     xarr =np.hstack(histo.axes.centers[0])
     vals=histo.values()
     for i in range(int(len(np.hstack(histo.axes.centers[0])))):
@@ -1803,8 +2182,7 @@ def variable_rebin_2D(histo,edges_x,edges_y):
 def normalise_histo_2D(histo,factor=1):
     widths_x= np.diff(np.hstack(histo.axes.edges[0]))
     widths_y= np.diff(histo.axes.edges[1][0])
-    print(histo.axes.edges)
-    print(widths_x,widths_y)
+
     for i in range(int(len(np.hstack(histo.axes.centers[0])))):
         if (i%100==0):
             print("Progreess = {:02f} %".format(100*i/len(np.hstack(histo.axes.centers[0]))))
