@@ -6,11 +6,21 @@
 #include "TTree.h"
 #include <TKey.h>
 #include <TList.h>
+#include <fstream>
+#include <nlohmann/json.hpp>
 
-void filter_mcmc(TString path){
+using json = nlohmann::json;
 
-   TFile *f1 = new TFile(path);
-   path.Remove(path.Length()-5);
+void filter_mcmc(TString path)
+{
+    std::ifstream file(path);
+    json data;
+    file >> data;
+   
+   TString data_path =TString("../hmixfit/"+(std::string)data["output-dir"]+"/hmixfit-"+(std::string)data["id"]+"/mcmc.root");
+
+   TFile *f1 = new TFile(TString(data_path));
+   data_path.Remove(data_path.Length()-5);
    // Get the key name
    TIter nextkey(f1->GetListOfKeys());
    TKey *key;
@@ -27,7 +37,7 @@ void filter_mcmc(TString path){
    }
 
    TTree *ntuple = (TTree*) f1->Get(tree_name);
-   TFile *f2 = new TFile(path+"_small.root","recreate");
+   TFile *f2 = new TFile(data_path+"_small.root","recreate");
    TTree *small = ntuple->CopyTree("Phase!=-1");
    f2->Close();
 }
