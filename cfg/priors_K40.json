@@ -1,0 +1,63 @@
+
+{   
+    "components":[
+        {
+        "name" : "K40_cables",
+        "full-name":"HV & Sig. cables",
+        "file" : "l200a-hv-signal-cables-K40-tier_pdf.root",
+        "best_fit": 2.4E6,
+        "prior": "gaus:1,2.4E6,0.2E6",
+        "type":"hpge"        
+        },
+        {
+        "name" : "K40_fiber_shroud",
+        "full-name":"Fiber Shroud",
+        "file" : "l200a-fibers-K40-tier_pdf.root",
+        "best_fit": 1.8E5,
+        "prior": "gaus:1,1.8E5,0.3E5",
+        "type":"icpms"    
+        },
+        {
+        "name" : "K40_hpge_insulators",
+        "full-name":"HPGe insulators",
+        "file" : "l200a-hpge-insulators-K40-tier_pdf.root",
+        "best_fit": 5E3,
+        "prior": "gaus:1,5E3,1.6E3" ,
+        "type":"hpge"       
+        },
+        {
+        "name" : "K40_mini_shroud",
+        "full-name":"Mini-shrouds",
+        "file" : "l200a-mini-shroud-K40-tier_pdf.root",
+        "best_fit": 1.2E3,
+        "prior": "gaus:1,1.2E3,0.4E3",
+        "type":"icpms"
+        },
+        {
+        "name" : "K40_pen_plates",
+        "full-name":"PEN plates",
+        "file" : "l200a-pen-plates-K40-tier_pdf.root",
+        "best_fit": 1.2E4,
+        "prior": "gaus:1,1.2E4,0.1E4",
+        "type":"hpge"        
+        },
+        {
+        "name" : "K40_sipm",
+        "full-name":"SiPM arrays",
+        "file" : "l200a-sipm-arrays-K40-tier_pdf.root",
+        "best_fit": 0,
+        "prior": "exp(-x*2.3/1.7E5)",
+        "type":"hpge"      
+        },
+        {
+        "name" : "K40_wls_reflector",
+        "full-name":"WLSR",
+        "file" : "l200a-wls-reflector-K40-tier_pdf.root",
+        "best_fit": 2.3E5,
+        "prior": "gaus:1,2.3E5,0.7E5",
+        "type":"hpge"      
+         }
+       
+    ]
+}
+

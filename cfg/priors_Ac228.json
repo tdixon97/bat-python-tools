@@ -1,0 +1,90 @@
+{
+
+   "components":
+   [    
+        {
+            "name" : "Ac228_cables",
+	    "full-name":"HV & Sig. cables",
+            "file" : "l200a-hv-signal-cables-Ra228-to-Ac228-tier_pdf.root",
+            "best_fit": 0,
+            "prior": "exp(-x*2.3/5.2E3)",
+            "type":"hpge"
+            },
+        {
+            "name" : "Ac228_hpge_support_copper",
+	    "full-name":"HPGe Cu holders",
+            "file" : "l200a-hpge-support-copper-Ra228-to-Ac228-tier_pdf.root",
+            "best_fit": 44,
+            "prior": "gaus:1,44,16",
+            "type":"icpms"  
+         },
+         {
+             "name" : "Ac228_fiber_shroud",
+	     "full-name":"Fiber Shroud",
+            "file" : "l200a-fibers-Ra228-to-Ac228-tier_pdf.root",
+            "best_fit": 0,
+            "prior": "exp(-x*2.3/1.7E4)",
+            "type":"icpms"    
+         },
+         
+       
+         {
+             "name" : "Ac228_mini_shroud",
+	     "full-name":"Mini-shrouds",
+            "file" : "l200a-mini-shroud-Ra228-to-Ac228-tier_pdf.root",
+            "best_fit": 3800,
+            "prior": "gaus:1,3800,900",
+            "type":"icpms"
+         },
+         {
+             "name" : "Ac228_pen_plates",
+	     "full-name":"PEN plates",
+            "file" : "l200a-pen-plates-Ra224-to-Pb208-tier_pdf.root",
+            "best_fit": 2000,
+            "prior": "gaus:1,2000,400",
+            "type":"hpge"        
+         },
+         {
+             "name" : "Ac228_birds_nest",
+	     "full-name":"Birds nest (above array)",
+            "file" : "l200a-birds-nest-Ra228-to-Ac228-tier_pdf.root",
+            "best_fit": 9.15E3,
+            "prior": "gaus:1,9.15E3,1.43E3",
+            "type": "estimate"  
+         },
+         {
+             "name" : "Ac228_front_end_electronics",
+	     "full-name":"FE electronics",
+            "file" : "l200a-front-end-electronics-Ra228-to-Ac228-tier_pdf.root",
+            "best_fit": 0,
+            "prior": "exp(-x*2.3/233)",
+            "type":"icpms"        
+         },
+         {
+             "name" : "Ac228_wls_reflector",
+	     "full-name":"WLSR",
+             "file" : "l200a-wls-reflector-Ra228-to-Ac228-tier_pdf.root",
+             "best_fit": 0,
+            "prior": "exp(-x*2.3/5E4)",
+             "type":"hpge"      
+         },
+         {
+             "name" : "Ac228_sipm",
+	     "full-name":"SiPM arrays",
+            "file" : "l200a-sipm-arrays-Ra228-to-Ac228-tier_pdf.root",
+            "best_fit": 0,
+            "prior": "exp(-x*2.3/1.8E4)",
+            "type":"hpge"      
+         },
+         {
+             "name" : "Ac228_hpge_insulators",
+	     "full-name":"HPGe insulators",
+            "file" : "l200a-hpge-insulators-Ra228-to-Ac228-tier_pdf.root",
+            "best_fit": 0,
+            "prior": "exp(-x*2.3/327)" ,
+            "type":"hpge"       
+         }
+      ]
+
+
+}

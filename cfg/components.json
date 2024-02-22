@@ -37,7 +37,8 @@
       "Bi212Tl208_mini_shroud",
       "Bi212Tl208_pen_plates",
 	"Bi212Tl208_wls_reflector",
-	"Ac228_pen_plates"
+	"Ac228_pen_plates",
+	"Ac228_fiber_shroud"
     ],
       "style": {
 	  "linewidth":0.6,
@@ -68,7 +69,9 @@
       "K40_hpge_support_copper",
       "K40_pen_plates",
 	"K40_wls_reflector",
-	"K40_birds_nest"
+	"K40_birds_nest",
+	"K40_cables",
+	"K40_fiber_shroud"
     ],
     "style": {
       "color": "#CC3311",
@@ -88,7 +91,8 @@
 	"K42_hpge_surface_bege",
 	"K42_hpge_surface_ppc",
 	"K42_hpge_surface_coax",
-      "K42_mini_shroud"
+	"K42_mini_shroud",
+	"K42_cables"
     ],
     "style": {
       "color": "#EE3377",
@@ -115,6 +119,7 @@
       "color": "#000000"
     }
   },
+		
   "data": {
     "hists": [
       "fitted_data"
