@@ -121,7 +121,7 @@
          {
              "name" : "Ac228_pen_plates",
              "full-name":"PEN plates",
-            "file" : "l200a-pen-plates-Ra224-to-Pb208-tier_pdf.root",
+            "file" : "l200a-pen-plates-Ra228-to-Ac228-tier_pdf.root",
             "best_fit": 2000,
             "prior": "gaus:1,2000,400",
             "type":"hpge"
