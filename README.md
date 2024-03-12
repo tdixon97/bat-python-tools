@@ -38,6 +38,10 @@ Several scripts have been created for the preparation of the fit.
 Finally some scripts perform a similar (and related) analysis of gamma line ratios.
 - `get-ratios.py`
 - `lar-survival-prob.py`
+- `mult-two-cats.py`
+
+Or to look at the priors:
+    - `analyse-priors.py`
 
 Most of the methods used for all the steps are contained in the python module `utils`.
 
