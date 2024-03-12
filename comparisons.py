@@ -215,4 +215,3 @@ if (compare_data==True):
 else:
     plt.savefig("plots/Comparison_{}_to_{}_{}_model.pdf".format(name_out_1,name_out_2,det_type))
 
-#plt.show()
