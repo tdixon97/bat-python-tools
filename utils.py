@@ -445,12 +445,10 @@ def get_df_results(trees:list,dataset_name:str,specs:list,outfile:str)->pd.DataF
         ## get spectrum name and multiplicity
         ## ---------------------------------
         index = tree.find(dataset_name)
-        print(tree)
-        print(dataset_name)
+   
         if index != -1:  
             spec_name = tree[index +1+len(dataset_name):].split(";")[0]
             multi_string = [string for string in specs if spec_name in string]
-            print(multi_string)
             if (len(multi_string)!=1):
                 raise ValueError("Error we have multiple spectrum per dataset in the out file")
             else:
@@ -544,7 +542,6 @@ def make_error_bar_plot(indexs,labels:list,y:np.ndarray,ylow:np.ndarray,yhigh:np
         raise ValueError("Splitting by those component with priors requires to set 'has_prior'")
 
     ### shorten labels
-    print(labels)
     for i in range(len(labels)):
         label = labels[i]
 
@@ -613,7 +610,7 @@ def make_error_bar_plot(indexs,labels:list,y:np.ndarray,ylow:np.ndarray,yhigh:np
         yhigh=yhigh[cat_sort]
         colors=[vset.blue,vset.teal,vset.magenta,vset.cyan]
         for cat,col in zip(sorted(set(categories)),colors):
-            print(cat,col)
+
             y_tmp = y[categories==cat]
             ylow_tmp = ylow[categories==cat]
             yhigh_tmp = yhigh[categories==cat]
@@ -931,7 +928,6 @@ def sum_effs(eff1:dict,eff2:dict)->dict:
 
 
     dict_sum={}
-    print(eff1,eff2)
     for key in set(eff1) | set(eff2):  # Union of keys from both dictionaries
 
         ## sum two layers
@@ -975,7 +971,7 @@ def get_data_counts_total(spectrum:str,det_types:dict,regions:dict,file:str,det_
                 data_counts = sum_effs(data_counts,get_data_counts(spectrum,det,regions,file))
 
         data_counts_total[det_name]=data_counts
-    print(data_counts_total)
+
     return data_counts_total
 
 
@@ -1352,7 +1348,11 @@ def parse_cfg(cfg_dict:dict,replace_dash:bool=True)->tuple[str,str,str,list,list
         for spec in cfg_dict["fit"]["theoretical-expectations"][key]:
             det_types.append(spec)
             if 'fit-range' in cfg_dict["fit"]["theoretical-expectations"][key][spec]:
-                ranges.append(cfg_dict["fit"]["theoretical-expectations"][key][spec]["fit-range"])
+                r =cfg_dict["fit"]["theoretical-expectations"][key][spec]["fit-range"]
+                if len(np.shape(r))==2:
+                    ranges.append([r[0][0],r[1][1]])
+                else:
+                    ranges.append(cfg_dict["fit"]["theoretical-expectations"][key][spec]["fit-range"])
             elif 'fit-range-y' in cfg_dict["fit"]["theoretical-expectations"][key][spec]:
                                 ranges.append(cfg_dict["fit"]["theoretical-expectations"][key][spec]["fit-range-y"])
 
@@ -1431,7 +1431,7 @@ def compare_intensity_curves(intensity_map,order,save=""):
     plt.savefig(save)
 
 
-def plot_N_Mc(pdfs,labels,name,save_pdf,data,range_x,range_y,scale,colors):
+def plot_N_Mc(pdfs,labels,name,save_pdf,data,range_x,range_y,scale,colors,bin=10):
     """Plot the MC files"""
     
     vset = tc.tol_cset('vibrant')
@@ -1445,9 +1445,20 @@ def plot_N_Mc(pdfs,labels,name,save_pdf,data,range_x,range_y,scale,colors):
     axes.set_ylim(range_y)
 
     if (data is not None):
-        data.plot(ax=axes,yerr=False,flow=None,histtype="fill",alpha=0.3,label="Data",color=vset.blue)
+        bins=np.diff(data.axes.edges[0])
+        data_tmp = copy.deepcopy(data)
+        for i in range(data.size-2):
+            data_tmp[i]*=10/bins[i]
+        data_tmp.plot(ax=axes,yerr=False,flow=None,histtype="fill",alpha=0.3,label="Data",color=vset.blue)
+
     for pdf,c,l in zip(pdfs,colors,labels):
-        pdf.plot(ax=axes,linewidth=.6,color=c,yerr=False,flow= None,histtype="step",label=l)
+        bins= np.diff(pdf.axes.edges[0])
+        pdf_tmp = copy.deepcopy(pdf)
+        
+        for i in range(pdf.size-2):
+           pdf_tmp[i]*=10/bins[i]
+
+        pdf_tmp.plot(ax=axes,linewidth=.6,color=c,yerr=False,flow= None,histtype="step",label=l)
    
 
     axes.legend(loc='best',edgecolor="black",frameon=True, facecolor='white',framealpha=1)    
@@ -1566,6 +1577,18 @@ def get_hist(obj,range:tuple=(132,4195),bins:int=10):
     """
     return obj.to_hist()[range[0]:range[1]][hist.rebin(bins)]
 
+def get_hist_variable(obj,range:tuple=(132,4195),bins:list=[]):
+    """
+    Extract the histogram (hist package object) from the uproot histogram and variably rebin
+    Parameters:
+        - obj: the uproot histogram 
+        - range: (tuple): the range of bins to select (in keV)
+        - bins (list): list of bin edges
+    Returns:
+        - hist with a variable binning
+    """
+
+    return variable_rebin(obj.to_hist()[range[0]:range[1]],bins)
 
 def get_data(path,spectrum="mul_surv",det_type="all",r=(0,4000),b=10):
     """Get the histogram (PDF) and the number of simulated primaries (with uproot)"""
@@ -1650,7 +1673,6 @@ def get_peak_counts(peak:float,name_peak:str,data_file:str,livetime:float=1,spec
 
     det_types,name,Ns = get_det_types("all")
 
-    #print(json.dumps(det_types,indent=1))
     energies= np.array([left_sideband[name_peak][0][0],left_sideband[name_peak][0][1],
                         regions[name_peak][0][1],right_sideband[name_peak][0][1]])
 
@@ -1904,14 +1926,16 @@ def get_livetime(verbose:bool=True)->float:
     
     """
 
-    meta = LegendMetadata("../legend-metadata")
+    meta = LegendMetadata()
 
     with open("cfg/analysis_runs.json",'r') as file:
         analysis_runs=json.load(file) 
 
+    analysis_runs = meta.dataprod.config.analysis_runs
+    print(json.dumps(analysis_runs,indent=1))
     taup=0
     vancouver=0
-
+    p8=0
     ### loop over periods
     for period in meta.dataprod.runinfo.keys():
         livetime_tot =0
@@ -1922,7 +1946,9 @@ def get_livetime(verbose:bool=True)->float:
             ## skip 'bad' runs
             if (period in analysis_runs.keys() and run in analysis_runs[period]):
 
-                if "phy" in meta.dataprod.runinfo[period][run].keys():
+                if "phy" in meta.dataprod.runinfo[period][run].keys() and "livetime_in_s" in  meta.dataprod.runinfo[period][run]["phy"].keys():
+                    
+                    print(meta.dataprod.runinfo[period][run]["phy"])
                     time = meta.dataprod.runinfo[period][run]["phy"]["livetime_in_s"]
                     livetime_tot+=time
 
@@ -1932,10 +1958,12 @@ def get_livetime(verbose:bool=True)->float:
             vancouver+=livetime_tot
         if (period=="p06" or period=="p07"):
             vancouver+=livetime_tot
-
+        if (period=="p08"):
+            p8 +=livetime_tot
     if (verbose):
-        print("Taup livetime = {}".format(taup))
-        print("Vancouver livetime = {}".format(vancouver))
+        print("Taup livetime = {}".format(taup/(60*60*24*365.25)))
+        print("Vancouver livetime = {}".format(vancouver/(60*60*24*365.25)))
+        print("Vancouver Full livetime = {}".format((vancouver+p8)/(60*60*24*365.25)))
 
     return vancouver
 
@@ -2153,8 +2181,15 @@ def fast_variable_rebinning(x, y, weights, edges_x, edges_y):
 
     return histo_var
 
-def variable_rebin(histo,edges):
-    """ Perform a variable rebinning of a hist object"""
+def variable_rebin(histo,edges:list):
+    """ 
+    Perform a variable rebinning of a hist object
+    Parameters:
+        - histo: The histogram object
+        - edges: The list of the bin edges
+    Returns:
+        - variable rebin histo    
+    """
     histo_var =( Hist.new.Variable(edges).Double())
     for i in range(histo.size-2):
         cent = histo.axes.centers[0][i]
