@@ -110,30 +110,43 @@ def bin_array_to_string(bin_array: np.ndarray) -> str:
     return ",".join(result)
 
 
-def compute_binning(gamma_energies=np.array([583,609,911,1460,1525,1764,2204,2615]),low_energy=565,high_energy=4000,gamma_binning_high=10,gamma_binning_low=6,cont_binning=15):
+def compute_binning(gamma_energies=np.array([583,609,911,1460,1525,1764,2204,2615]),
+                    low_energy=565,high_energy=4000,gamma_binning_high=10,gamma_binning_low=6,cont_binning=15,
+                    reso_curve=None,nsigma=3,nsigma_k=5,blind=(2014,2064)):
     """
     Function to compute a variable binning given some inputs
     """
     bin_edges = np.array([low_energy,high_energy])
+    if (blind is not None):
+        bin_edges = np.array([low_energy,blind[0],blind[1],high_energy])
 
+    print(bin_edges)
     for i in range(len(gamma_energies)):
 
         ### check first for overlaps
         energy = gamma_energies[i]
-        if (energy<1000):
+        if (energy<1000 and reso_curve==None):
             gamma_binning=gamma_binning_low
-        else:
+        elif (reso_curve==None):
             gamma_binning=gamma_binning_high
+        elif energy!=1461 and energy!=1525:
+            gamma_binning=int(math.ceil(2*nsigma*np.sqrt(reso_curve[0]+reso_curve[1]*gamma_energies[i])/2.355))
+            if (gamma_binning%2==1):
+                gamma_binning+=1
+        else:
+            gamma_binning=int(math.ceil(2*nsigma_k*np.sqrt(reso_curve[0]+reso_curve[1]*gamma_energies[i])/2.355))
+            if (gamma_binning%2==1):
+                gamma_binning+=1
 
         if (i!=len(gamma_energies)-1):
 
             if (energy+gamma_binning/2>gamma_energies[i+1]-gamma_binning/2):
-                raise ValueError("Error: Gamma lines are too close - revise")
+                raise ValueError(f"Error: Gamma lines {energy}, {gamma_energies[i+1]}, binning = {gamma_binning} are too close - revise")
             
         bin_edges=insert_bin(int(energy-gamma_binning/2),bin_edges)
         bin_edges=insert_bin(int(energy+gamma_binning/2),bin_edges)
 
-
+    print(bin_edges)
     bin_edges_only_gamma=bin_edges
 
     ### fill in the continuum
@@ -160,8 +173,9 @@ def compute_binning(gamma_energies=np.array([583,609,911,1460,1525,1764,2204,261
                 stop=True
             else:           
                 stop=True
-          
-    return bin_edges
+    
+    print(bin_edges)
+    return np.unique(bin_edges)
 
 def remove_duplicates(bin_edges):
     return np.unique(bin_edges)
@@ -224,42 +238,64 @@ def M2_reso_analysis(json_path:str="gamma_line_output/M2_resolutions_p3_p7_20240
     m.limits[1]=(0,0.1)
     m.migrad()
     axes.plot(xi,np.sqrt(m.values[0]+m.values[1]*xi),color=vset.teal,linestyle="--",label=f"Fit to M2")
-    print(m)
     m.minos()
-    print(m)
     axes.legend()
+    reso_map_m2 ={"M2":{"a":m.values[0],"b":m.values[1]}}
+
+    with open("gamma_line_output/M2_reso.json", 'w') as json_file:
+        json.dump(reso_map_m2,json_file,indent=1)
 
     plt.show()
+
+
+    ### dump the reso curve
 
 def main():
 
 
     ## at some point read these files
+    ### read the reso curves
+
+    with open("gamma_line_output/M2_reso.json", 'r') as json_file:
+        M2_reso=json.load(json_file)
+
+    with open("gamma_line_output/M1_resolutions_p3_p7_20240131.json", 'r') as json_file:
+        M1_reso=json.load(json_file)
+
+
+
+    gammas = np.array([511, 583, 609, 727, 835, 911, 969, 1120, 1173,1333, 1378, 1461, 1525, 1588, 1730, 1765, 2104, 2119, 2204, 2448, 2615])
+    ### binning
     
-    gammas = np.array([511, 583, 609, 727, 835, 911, 969, 1120, 1173, 1378, 1461, 1525, 1588, 1730, 1765, 2104, 2119, 2204, 2448, 2615])
-    bin_edges=compute_binning(gamma_energies=gammas,low_energy=500,high_energy=4000,gamma_binning_low=6,gamma_binning_high=10,cont_binning=20)
-    bin_edges_coax=compute_binning(gamma_energies=gammas,low_energy=500,high_energy=4000,gamma_binning_low=15,gamma_binning_high=15,cont_binning=20)
+    binnings={}
+    bin_strings={}
+    for group in ["ICPC","COAX","PPC","BEGe"]:
+        a=M1_reso[group]["a"]
+        b=M1_reso[group]["b"]
+        binnings[group.lower()]=compute_binning(gamma_energies=gammas,low_energy=500,high_energy=4000,cont_binning=20,reso_curve=(a,b))
+        bin_strings[group.lower()]=bin_array_to_string(binnings[group.lower()])
+
 
     gammas_M2 = np.array([277,511,583,609,768,911,934,1120,1173,1238,1333,1408,1525,2104,2615])
-    bin_edges_M2=compute_binning(gamma_energies=gammas_M2,low_energy=200,high_energy=3000,gamma_binning_low=20,gamma_binning_high=20,cont_binning=20)
-    bin_edges_M2_2D=compute_binning(gamma_energies=gammas_M2,low_energy=200,high_energy=3000,gamma_binning_low=20,gamma_binning_high=20,cont_binning=50)
-
-    bin_edges=np.unique(bin_edges)
-    bin_edges_coax=np.unique(bin_edges_coax)
     
-    ### get the binning string
+    M2_a = M2_reso["M2"]["a"]
+    M2_b=M2_reso["M2"]["b"]
 
-    widths= np.diff(bin_edges)
-    print("bins ",bin_edges)
-    print("bins coax ",bin_edges_coax)
-    print("bins m2 ",bin_edges_M2)
-    print("bins 2D ",bin_edges_M2_2D)
-    print("bins ",bin_array_to_string(bin_edges))
-    print("bins coax ",bin_array_to_string(bin_edges_coax))
-    print("bins m2 ",bin_array_to_string(bin_edges_M2))
-    print("bins 2d ",bin_array_to_string(bin_edges_M2_2D))
+    binnings["M2"]=compute_binning(gamma_energies=gammas_M2,low_energy=200,high_energy=3000,cont_binning=20,reso_curve=(M2_a,M2_b))
+    binnings["M2_2D"]=compute_binning(gamma_energies=gammas_M2,low_energy=200,high_energy=3000,cont_binning=50,reso_curve=(M2_a,M2_b))
 
+    bin_strings["M2"]=bin_array_to_string(binnings["M2"])
+    bin_strings["M2_2D"]=bin_array_to_string(binnings["M2_2D"])
+    for bin in binnings:
+        print(f"For {bin}")
+        print("bins ",binnings[bin])
+        print("bin string ",bin_array_to_string(binnings[bin]))
 
+        print("\n")
+    
+   
+    with open("cfg/binning.json", 'w') as json_file:
+        json.dump(bin_strings,json_file,indent=1)
 
 
     def get_hist(obj):
@@ -267,8 +303,7 @@ def main():
 
 
 
-    outfile="../hmixfit/results/hmixfit-l200a_vancouver_v0_5_rebin/histograms.root"
-
+    outfile="../hmixfit/results/hmixfit-l200a_vancouver_workshop_v0_2_new_m2/histograms.root"
 
     style = {
         "yerr": False,
@@ -276,17 +311,19 @@ def main():
         "lw": 0.6,
     }
 
-    for dtype in ["ppc","icpc","bege","coax"]:
+    for dtype in ["ppc","icpc","bege","coax","cat_a_e1","cat_c_e1","cat_d_e2"]:
         with uproot.open(outfile) as f:
 
-            hist_icpc = get_hist(f["l200a_vancouver23_dataset_v0_2_{}".format(dtype)]["originals"]["fitted_data"])
-            if (dtype!="coax"):
-                hist_icpc_rebin=utils.variable_rebin(hist_icpc,bin_edges)
+            if ("cat" in dtype):
+                dtype_bin="M2"
             else:
-                hist_icpc_rebin=utils.variable_rebin(hist_icpc,bin_edges_coax)
+                dtype_bin=dtype
 
+            hist_icpc = get_hist(f["l200a_vancouver23_dataset_v0_3_split_geometry_{}".format(dtype)]["originals"]["fitted_data"])
+            hist_icpc_rebin=utils.variable_rebin(hist_icpc,binnings[dtype_bin])
+         
             hist_icpc_rebin=utils.normalise_histo(hist_icpc_rebin)
-            hist_icpc=hist_icpc[500:3000][hist.rebin(1)]
+            hist_icpc=hist_icpc[200:3000][hist.rebin(1)]
             
         hist_icpc=utils.normalise_histo(hist_icpc)
 
@@ -304,7 +341,7 @@ def main():
         axes_full.set_xlim(500,4000)
         plt.savefig("plots/binning/check_{}.pdf".format(dtype))
 
-        for E in [600,1500,2615]:
+        for E in [500,600,1500,2615]:
             axes_full.set_xlabel("Energy [keV]")
             axes_full.set_ylabel("counts/keV")
 
@@ -312,11 +349,13 @@ def main():
             axes_full.legend(loc="upper right")
             axes_full.set_xlim(E-50,E+50)
             
-            axes_full.set_ylim(0,1.1*np.max(hist_icpc[(E-50)*1j:(E+50)*1j].values()))
-            plt.savefig("plots/binning/check_{}_{}.pdf".format(dtype,E))
+            axes_full.set_ylim(0,1+1.1*np.max(hist_icpc[(E-50)*1j:(E+50)*1j].values()))
+            if np.max(hist_icpc[(E-50)*1j:(E+50)*1j].values())>2:
+                plt.savefig("plots/binning/check_{}_{}.pdf".format(dtype,E))
         #plt.show()
 
     pass
 if __name__ == "__main__":
     #main()
-    M2_reso_analysis()
+    M2_reso_analysis()  
+    main()
