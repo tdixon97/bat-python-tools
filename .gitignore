@@ -7,6 +7,7 @@
 *.h5
 *.pkl
 *#
+.vscode/*
 plots/*
 bin/*
 __pycache__/*
