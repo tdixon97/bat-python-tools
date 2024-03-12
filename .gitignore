@@ -8,7 +8,9 @@
 *.pkl
 *#
 plots/*
+bin/*
 __pycache__/*
 .#components.json
 *.text
 *.txt
+filter_mcmc
