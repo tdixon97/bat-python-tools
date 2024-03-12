@@ -1688,7 +1688,12 @@ def get_peak_counts(peak:float,name_peak:str,data_file:str,livetime:float=1,spec
     return counts/livetime,low/livetime,high/livetime
 
 def get_eff_minuit(counts_total,counts_after,energies):
-    """ Get the efficiency with Minuit the likelihood is just a binned one"""
+    """ 
+    Get the efficiency with Minuit the likelihood is just a binned one
+    
+    
+    
+    """
 
     cost = create_efficiency_likelihood(counts_after,counts_total-counts_after)
     Ns_guess = counts_total[1]
@@ -1711,8 +1716,19 @@ def get_eff_minuit(counts_total,counts_after,energies):
     plot_eff_calc(energies,counts_after,counts_total-counts_after,m.values)   
     return m.values["eff_s"],elow,ehigh
 
-def get_data_counts(spectrum,det_type,regions,file):
-    """Get the counts in the data in a range"""
+def get_data_counts(spectrum:str,det_type:str,regions:dict,file):
+    """
+    
+    Function to get the counts in the data in a range:
+    Parameters:
+        - spectrum (str): the spectrum to use
+        - det_type (str): the detector type to select
+        - regions (dict): dictonary of regions to get counts in
+        - file: uproot file of the data
+    Returns:
+        - dict of the data counts
+    
+    """
 
 
     if "{}/{}".format(spectrum,det_type) in file:
@@ -2137,6 +2153,10 @@ def project_sum(histo):
     """ Take a 2D histogram and create a 1D histogram with the sum of the bin contents
         Note: This is in principle impossible here an approximation is used where a sum of a -- a+1 and b-- b+1 is split evenly between bin a+b -- a+b+1 and a+b+1 --- a+b +2
         If you want a proper summed histo you should build it directly from the raw data
+        Parameters:
+            -histo: 2D histogram to be projected
+        Returns:
+            - projected 1D histogram
     """
     w,x,y=histo.to_numpy()
 
@@ -2156,7 +2176,16 @@ def project_sum(histo):
 
 
 def fast_variable_rebinning(x, y, weights, edges_x, edges_y):
-
+    """
+    Perform a variable rebinning of a 2D histogram in a fast way with numpy operations:
+    Parameters:
+        - x :np.array of bin centers in x
+        - y :np.array of bin centers in y
+        - weights: 2D np.array of the weights for the histo
+        - edges_x,edges_y np.arrays of the bin edges to rebin to
+    Returns
+        - hist object of the rebinnined histogram
+    """
     indices_x = np.searchsorted(edges_x, x[0:-1]+0.1) - 1
     indices_y = np.searchsorted(edges_y, y[0:-1]+0.1) - 1
     
@@ -2199,6 +2228,16 @@ def variable_rebin(histo,edges:list):
     return histo_var
 
 def variable_rebin_2D(histo,edges_x,edges_y):
+    """
+    Perform a variable rebinning of a 2D histogram
+    Done in a slow way with a loop.
+    Parameters 
+        -histo (Hist object)
+        -edges_x,edges_y: np.array of the bin_edges
+    Returns:
+        - rebinnined histogram
+    """
+
     histo_var =( Hist.new.Variable(edges_x).Variable(edges_y).Double())
   
     xarr =np.hstack(histo.axes.centers[0])
@@ -2215,6 +2254,16 @@ def variable_rebin_2D(histo,edges_x,edges_y):
     return histo_var
 
 def normalise_histo_2D(histo,factor=1):
+    """
+    Normalise 2D histogram by the bin area:
+    Parameters:
+    ----------------------
+        - histo: Hist object
+        - factor: a scaling factor to multiply the histo by
+    Returns
+    ----------------------
+        - normalised histo
+    """
     widths_x= np.diff(np.hstack(histo.axes.edges[0]))
     widths_y= np.diff(histo.axes.edges[1][0])
 
@@ -2231,11 +2280,22 @@ def normalise_histo_2D(histo,factor=1):
     return histo
 
 def normalise_histo(hist,factor=1):
-    """ Normalise a histogram into units of counts/keV"""
+    """ 
+    Normalise a histogram into units of counts/keV (by bin width)
+     Parameters:
+    ----------------------
+        - histo: Hist object
+        - factor: a scaling factor to multiply the histo by
+    Returns
+    ----------------------
+        - normalised histo
+    """
+
 
     widths= np.diff(hist.axes.edges[0])
 
     for i in range(hist.size-2):
         hist[i]/=widths[i]
         hist[i]*=factor
+
     return hist
