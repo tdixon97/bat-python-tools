@@ -36,8 +36,7 @@ Several scripts have been created for the preparation of the fit.
 
 ##### Other scripts
 Finally some scripts perform a similar (and related) analysis of gamma line ratios.
-- `analyse-relative-intensity.py`
-- `analyse-mult-two.py`
+- `get-ratios.py`
 - `lar-survival-prob.py`
 
 Most of the methods used for all the steps are contained in the python module `utils`.
