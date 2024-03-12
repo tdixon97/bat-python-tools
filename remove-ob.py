@@ -31,7 +31,6 @@ import tol_colors as tc
 import hist
 import argparse
 import re
-import utils
 import json
 import time
 import warnings
