@@ -14,3 +14,6 @@ __pycache__/*
 *.text
 *.txt
 filter_mcmc
+fc.py
+test.json
+test.csv
