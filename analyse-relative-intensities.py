@@ -45,19 +45,21 @@ style = {
 pdf_path = "../hmixfit/inputs/pdfs/l200a-pdfs_vancouver23/"
 data_path="../hmixfit/inputs/data/datasets/l200a-vancouver23-dataset-v0.2.root"
 specs=["mul_surv","mul2_surv"]
-priors_file ="priors.json"
+priors_file ="cfg/fibers.json"
 
 with open(priors_file,"r") as file_cfg:
     priors =json.load(file_cfg)
 
+print(json.dumps(priors,indent=1))
 livetime=0.36455
 order=["fiber_shroud","sipm","birds_nest","wls_reflector","pen_plates","front_end_electronics","hpge_insulators","hpge_support_copper","cables","mini_shroud"]
 order2=["pen_plates","front_end_electronics","hpge_insulators","hpge_support_copper","cables","mini_shroud","fiber_shroud","sipm","birds_nest","wls_reflector"]
-
+order=["fiber_shroud","fiber_copper"]
+order2=["fiber_shroud","fiber_copper"]
 ### we need to extract the PDFs and get the counts in relevant gamma lines first
 
 #type="Bi212Tl208"
-type="Pb214Bi214"
+type="Bi212Tl208"
 if (type=="Bi212Tl208"):
     peaks=[583,727,861,1593,2104,2615,3197]
     main=2615
@@ -65,29 +67,37 @@ elif(type=="Pb214Bi214"):
     peaks=[609,1238,1378,1764,2017,2204,2447]
     main=2204
 
-
-
+pdfs=[]
+names=[]
 output_maps ={}
 with PdfPages('plots/relative_intensity/pdfs_{}.pdf'.format(type)) as pdf:
     for spec in specs:
         output_map={}
         for comp in priors["components"]:
-        
+            
+            print(comp["name"])
             output_tmp ={}
             if (type not in comp["name"]):
                 continue
+            pdf,N=utils.get_pdf_and_norm(pdf_path+comp["file"],b=10,r=(0,3500),spectrum=spec)
+            print(N)
+            for i in range(pdf.size-2):
+                pdf[i]/=N
 
+            pdfs.append(pdf)
+            names.append(comp["name"])
             for peak in peaks:
 
                 pdf_tmp,N = utils.get_pdf_and_norm(pdf_path+comp["file"],b=10,r=(peak-15,peak+15),spectrum=spec)
                 center= pdf_tmp[1]
                 bkg = (pdf_tmp[2]+pdf_tmp[0])/2.
                 value = center-bkg
+
                 if (value<0):
                     value=0
                 output_tmp[peak]=value
                 utils.plot_mc(pdf_tmp,"Peak of {} in {}".format(peak,comp["name"]),pdf,range_x=(peak-15,peak+15),range_y=(1,center*2),scale="linear")
-
+                #plt.show()
             output_map[comp["name"][11:]]=output_tmp
         output_maps[spec]=output_map
 
@@ -100,8 +110,7 @@ with PdfPages('plots/relative_intensity/pdfs_{}.pdf'.format(type)) as pdf:
                     continue
                 output_maps[spec][comp][peak]/=norm
 
-
-
+utils.plot_N_Mc(pdfs,names,"compare fiber and copper",False,None,(0,3500),None,"log",[vset.red,vset.blue])
 
 ## ensure 2615 / 2615 in M1 ratio is 1
 """
