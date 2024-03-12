@@ -1,3 +1,8 @@
+""" plot-activities.py
+Python script to plot the activites from the hmixfit fit.
+Author: Toby Dixon (toby.dixon.23@ucl.ac.uk)
+"""
+
 from legend_plot_style import LEGENDPlotStyle as lps
 lps.use('legend')
 
@@ -12,169 +17,223 @@ import argparse
 import re
 import utils
 import json
+import os
 import numpy as np
 from IPython.display import display
 import pandas as pd
+from matplotlib.backends.backend_pdf import PdfPages
+from legend_plot_style import LEGENDPlotStyle as lps
+lps.use('legend')
 vset = tc.tol_cset('vibrant')
 mset = tc.tol_cset('muted')
 plt.rc('axes', prop_cycle=plt.cycler('color', list(vset)))
 
-parser = argparse.ArgumentParser(description='A script with command-line argument.')
-parser.add_argument("-i","--in_file",type=str,help="file",default="../hmixfit/results/hmixfit-l200a_taup_silver_dataset_m1_norm-analysis.root")
-parser.add_argument("-2","--in_file_2",type=str,help="file",default=None)
 
-parser.add_argument("-c","--components",type=str,help="json components config file path",default="components.json")
+
+### parse the arguments
+### ---------------------------
+
+parser = argparse.ArgumentParser(description='A script with command-line argument.')
+parser.add_argument("-c","--cfg", type=str,help="Fit cfg file",default="../hmixfit/inputs/cfg/l200a-taup-silver-m1.json")
+parser.add_argument("-2","--cfg_2",type=str,help="Second fit cfg file (to make comparison)",default=None)
+parser.add_argument("-C","--components",type=str,help="json components config file path",default="cfg/components.json")
 parser.add_argument("-o","--obj",type=str,help="obj to plot 'fit_range' 'bi_range' or 'scaling_factor', 'parameter",default="fit_range")
-parser.add_argument("-s","--scale",type=float,help="factor to scale the second set of activiies by",default=1)
-parser.add_argument("-d","--data",type=str,help="which data type to look at bege icpc ppc coax or all",default="icpc")
+parser.add_argument("-t","--type",type=str,help="Type for computation of fit/bi range either 'all', 'M1','M2' or 'by_spec'",default="all")
+parser.add_argument("-l","--labels",type=str,help="A list of labels (comma sep.) for the comparison plots",default="fit1,fit2")
+parser.add_argument("-O","--outdir",type=str,help="output directory to save plots",default="plots/summary/")
+parser.add_argument("-s","--save",type=int,help="save the plots? (1) or print to screen (0)?",default=True)
 
 
 
 
 ### set the parameters
 args = parser.parse_args()
-infile=args.in_file
-infile2=args.in_file_2
-scale= args.scale
+
+cfg_path = args.cfg
+cfg_path_2=args.cfg_2
+json_file=args.components
+obj=args.obj
+integral_type =args.type
+save=args.save
+l=utils.csv_string_to_list(args.labels,str)
+outdir=args.outdir
+priors_file = "cfg/priors.json"
+
+with open(cfg_path,"r") as file:
+    cfg =json.load(file)
+
+fit_name,out_dir,specs,_,dataset_name=utils.parse_cfg(cfg)
+outfile = out_dir+"/hmixfit-"+fit_name+"/analysis.root"
+os.makedirs(outdir+"/"+fit_name,exist_ok=True)
+
 do_comp=False
-datas=[args.data]
-if (infile2!=None):
+if (cfg_path_2!=None):
+
+    with open(cfg_path_2,"r") as file:
+        cfg_2=json.load(file)
+
+    fit_name_2,out_dir_2,specs2,_,dataset_name_2=utils.parse_cfg(cfg_2)
+    outfile_2 = out_dir_2+"/hmixfit-"+fit_name_2+"/analysis.root"
+    
     do_comp=True
-json_file =args.components
-obj = args.obj
-first_index =utils.find_and_capture(infile,"hmixfit-l200a_")
 
-name_out = infile[first_index:-14]
-label1=name_out
-label2=""
-if (do_comp):
-    first_index =utils.find_and_capture(infile2,"hmixfit-l200a_")
-    label2=infile2[first_index:-14]
-
-label1="Old M2"
-label2="New M2"
-
+### load the components file
 with open(json_file, 'r') as file:
     components = json.load(file, object_pairs_hook=OrderedDict)
 
-dfs={}
-indexs={}
-dfs2={}
-idx=0
 
-
-#datas=["icpc","ppc","coax","bege"]
-datas=["top","mid_top","mid","mid_bottom","bottom"]
 ### get the fit results as some dataframes
-for data in datas:
+### ---------------------------------------------
 
-    df =pd.DataFrame(utils.ttree2df_all(infile,data))
-    df = df[df['fit_range_orig'] != 0]
-    dfs[data]=df
+with uproot.open(outfile) as data_file:
 
-    if idx==0:
-        df_tot = df
-    else:
-        new_row=df[df["comp_name"]== "2vbb_{}".format(data)]
-        new_row2=df[df["comp_name"]== "K42_hpge_surface_{}".format(data)]
+    trees= utils.get_list_of_not_directories(file  = data_file)
+    trees= [element for element in trees if 'counts' in element]
 
-        df_tot = pd.concat([df_tot,new_row,new_row2],ignore_index=True)
+df_tot=utils.get_df_results(trees,dataset_name,specs,outfile)
+
+if (do_comp==True):
+    with uproot.open(outfile_2) as data_file:
+
+        trees2= utils.get_list_of_not_directories(file  = data_file)
+        trees2= [element for element in trees2 if 'counts' in element]
+
+    df_tot2=utils.get_df_results(trees2,dataset_name_2,specs2,outfile_2)
 
 
-    if (do_comp==True):
-        df2 =pd.DataFrame(utils.ttree2df_all(infile2,data))
-        df2 = df2[df2['fit_range_orig'] != 0]
-        dfs2[data]=df2
-        
-        if idx==0:
-            df2_tot = df2
-        else:
-            new_row=df2[df2["comp_name"]== "2vbb_{}".format(data)]
-       
-            df2_tot = pd.concat([df2_tot,new_row],ignore_index=True)
-    idx=idx+1
-print(df_tot)
+#### get the priors
+#### ----------------------------------------
 
-### if scaling factor or parameter
-names=datas
+
+with open(priors_file,"r") as file_cfg:
+    priors =json.load(file_cfg)
+
+## store the information
+### 1) activity quantiles 
+### 2) MC pdfs ? i dont think its needed for this script
+quantiles={}
+
+for comp in priors["components"]:
+
+    rv1,_,range_ci = utils.extract_prior(comp["prior"])
+
+    point_est = comp["best_fit"]
+    low_err = point_est-range_ci[0]
+    high_err = range_ci[1]-point_est
+    quantiles[comp["name"]]=(point_est,low_err,high_err)
+ 
+
+### Build a map of what to plot should contain
+### 1) the name of the spectrum (all, M1,M2 etc)
+### 2) whether its fit_range, bi_range or parameter
+
+list_of_plots=[]
+
 if obj=="scaling_factor" or obj=="parameter":
-    datas=["bege"]
-    names=["all"]
+    list_of_plots=[
+        {
+            "name":"M1",
+            "type":obj
+        }
+
+    ]
+elif (obj=="fit_range") or (obj=="bi_range"):
+    if (integral_type=="all_spec") or (integral_type=="M1") or (integral_type=="M2"):
+        list_of_plots.append({"name":integral_type,"type":obj})
+    elif (integral_type=="by_spec"):
+        for tree in trees:
+   
+            index = tree.find(dataset_name)
+            if index != -1:  
+                spec_name = tree[index +1+len(dataset_name):].split(";")[0]
+
+            list_of_plots.append({"name":spec_name,"type":obj})
+
+    else:
+        raise ValueError("type must be either all M1, M2 or by_spec")
+
+else:
+    raise ValueError("obj must be either fit_range, bi_range scaling_factor or parameter")
 
 
 
 #### normalise the dataframes
-for data,name in zip(datas,names):
-    
+with PdfPages("{}/{}/{}_{}_results.pdf".format(outdir,fit_name,obj,integral_type)) as pdf:
+   
+    for plot in list_of_plots:
 
-    if (obj=="parameter"):
         df =df_tot
         df= df.sort_values(by='comp_name')
+        labels=utils.format_latex(np.array(df_tot["comp_name"]))
+        names=np.array(df_tot["comp_name"])
+        indexs=utils.get_index_by_type(names)
+        has_prior=[]
+        assay_mean=[]
+        assay_low=[]
+        assay_high=[]
+        ### loop over names
+        for name in names:
+            if ("prior" in cfg["fit"]["parameters"][name]) and cfg["use-priors"]==True:
+                has_prior.append(True)
+            else:
+                has_prior.append(False)
+            if (name in quantiles):
+                assay_mean.append(quantiles[name][0])
+                assay_low.append(quantiles[name][1])
+                assay_high.append(quantiles[name][2])
+            else:
+                assay_mean.append(0)
+                assay_low.append(0)
+                assay_high.append(0)
         
-        if (do_comp):
-            df2=df2_tot
-            df2= df2.sort_values(by='comp_name')
+        assay_high=np.array(assay_high)
+        assay_low=np.array(assay_low)
+        assay_mean=np.array(assay_mean)
+        
+        name = plot["name"]
+        type_plot=plot["type"]
+
+        ### data into numpy array
+        ### -----------------------
+        x,y,y_low,y_high,assay_norm=utils.get_data_numpy(type_plot,df_tot,name)
+
+        if (type_plot=="parameter"):
+            y/=31.5
+            y_low/=31.5
+            y_high/=31.5
+            assay_norm/=31.5
             
-        print(df)
-      
-        x,y,y_low,y_high=utils.get_from_df(df,"fit_range")
-        norm = np.array(df["fit_range_orig"])
-        x=x/norm
-        y=y/norm
-        y_low=y_low/norm
-        y_high=y_high/norm
+        assay_high*=assay_norm
+        assay_low*=assay_norm
+        assay_mean*=assay_norm
 
-        if (do_comp):
-            x2,y2,y_low2,y_high2=utils.get_from_df(df2,"fit_range")
-            norm2 = np.array(df2["fit_range_orig"])
-            x2=x2/norm2
-            y2=y2/norm2
-            y_low2=y_low2/norm2
-            y_high2=y_high2/norm2
-            y2*=scale
-            y_low2*=scale
-            y_high2*=scale
-        
-    
-    else:
-        if (obj!="scaling_factor"):
-            df=dfs[data]
-            if (do_comp):
-                df2=dfs2[data]
+
+        if (do_comp==False):
+            
+            for ids in [np.arange(len(labels)),indexs["U"],indexs["Th"],indexs["K"]]:
+                utils.make_error_bar_plot(ids,labels,y,y_low,y_high,data=name,obj=obj,split_priors=True,has_prior=has_prior,
+                                        assay_mean=assay_mean,assay_low=assay_low,assay_high=assay_high)
+
+                if (save==True):
+                    pdf.savefig()
+                else:
+                    plt.show()
+            
         else:
-            df=df_tot
-            if (do_comp):
-                df2=df2_tot
-        x,y,y_low,y_high=utils.get_from_df(df,obj)
-        if (do_comp):
-            x2,y2,y_low2,y_high2=utils.get_from_df(df2,obj)
-            y2*=scale
-            y_low2*=scale
-            y_high2*=scale
+            x2,y2,y_low2,y_high2,assay_norm=utils.get_data_numpy(type_plot,df_tot2,name)
 
-    ns=0
-    labels=utils.format_latex(np.array(df["comp_name"]))
-    if (do_comp):
-        labels2=utils.format_latex(np.array(df2["comp_name"]))
- 
-    names=np.array(df["comp_name"])
+            if (type_plot=="parameter"):
+                y2/=31.5
+                y_low2/=31.5
+                y_high2/=31.5
+            
+            for ids in [np.arange(len(labels)),indexs["U"],indexs["Th"],indexs["K"]]:
+                utils.make_error_bar_plot(ids,labels,y,y_low,y_high,
+                                          y2=y2,ylow2=y_low2,yhigh2=y_high2,
+                                          data=name,obj=obj,do_comp=True,split_priors=False,has_prior=has_prior,
+                                        assay_mean=assay_mean,assay_low=assay_low,assay_high=assay_high,label1=l[0],label2=l[1])
 
-    indexs=utils.get_index_by_type(names)
-
-    if (do_comp==0):
-        utils.make_error_bar_plot(np.arange(len(labels)),labels,y,y_low,y_high,name,name_out,obj)
-        utils.make_error_bar_plot(indexs["U"],labels,y,y_low,y_high,name,name_out+"_U",obj,scale="linear",split_priors=True)
-        utils.make_error_bar_plot(indexs["Th"],labels,y,y_low,y_high,name,name_out+"_Th",obj,scale="linear",split_priors=True)
-        utils.make_error_bar_plot(indexs["K"],labels,y,y_low,y_high,name,name_out+"_K",obj)
-
-    else:
-        utils.make_error_bar_plot(np.arange(len(labels)),labels,y,y_low,y_high,name,name_out,obj,y2,y_low2,y_high2,label1,label2,"",1)
-        utils.make_error_bar_plot(indexs["U"],labels,y,y_low,y_high,name,name_out,obj,y2,y_low2,y_high2,label1,label2,"U",1,scale="linear",upper=10000,show=True)
-        utils.make_error_bar_plot(indexs["2nu"],labels,y,y_low,y_high,name,name_out,obj,y2,y_low2,y_high2,label1,label2,"2nu",1,low=3E5,upper=5E5,scale="linear")
-
-        utils.make_error_bar_plot(indexs["Th"],labels,y,y_low,y_high,name,name_out,obj,y2,y_low2,y_high2,label1,label2,"Th",1,scale="linear",upper=10000,show=True)
-        utils.make_error_bar_plot(indexs["K"],labels,y,y_low,y_high,name,name_out,obj,y2,y_low2,y_high2,label1,label2,"K",1,scale="linear")
-          
-                                  
-
-  
+                if (save==True):
+                    pdf.savefig()
+                else:
+                    plt.show()
