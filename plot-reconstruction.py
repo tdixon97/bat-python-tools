@@ -31,8 +31,14 @@ style = {
     "flow": None,
     "lw": 0.6,
 }
-
-
+def remove_duplicated(listo,range):
+    list_new = []
+    range_new=[]
+    for item,range_tmp in zip(listo,range):
+        if item not in list_new:
+            list_new.append(item) 
+            range_new.append(range_tmp)
+    return list_new,range_new
 
 ##### the old set of arguments
 ##### --------------------------------------------------------------------------------
@@ -62,7 +68,11 @@ with open(cfg,"r") as json_file:
     cfg_dict =json.load(json_file)
 
 ### extract all we need from the cfg dict
-fit_name,out_dir,det_types,ranges,dataset_name=utils.parse_cfg(cfg_dict)
+fit_name,out_dir,det_types,ranges,dataset_names,ds_files=utils.parse_cfg(cfg_dict)
+
+det_types,ranges=remove_duplicated(det_types,ranges)
+
+
 outfile = out_dir+"/hmixfit-"+fit_name+"/histograms.root"
 os.makedirs("{}/{}/".format(outdir,fit_name),exist_ok=True)
 
@@ -107,7 +117,10 @@ get_originals=args.originals
 #### creat the gamma lines plots
 ### ---------------------------
 blind=True
-gamma_line_plots={
+
+gamma_line_plots=[]
+for d in dataset_names:
+    gamma_line_plots.append({
     "Tl":
     {
         "lines":[583,2615],
@@ -134,7 +147,7 @@ gamma_line_plots={
         "count":0
     }
 
-}
+    })   
 
 
 with open(json_file, 'r') as file:
@@ -145,7 +158,6 @@ def get_hist(obj):
 
 def get_hist_rb(obj):
     return obj.to_hist()
-
 ### save to one PDF
 
 with PdfPages("{}/{}/fit_reconstructions.pdf".format(outdir,fit_name)) as pdf:
@@ -154,12 +166,9 @@ with PdfPages("{}/{}/fit_reconstructions.pdf".format(outdir,fit_name)) as pdf:
     for det_type,type_name,fit_range in zip(det_types,type_names,ranges):
         xlow=fit_range[0]
         xhigh=fit_range[1]
-        gamma_counter=0
 
 
-        datasets=["{}_{}".format(dataset_name,det_type.split("/")[1])]
         labels=[type_name]
-            
         ## set height of histo
         y=5
         if det_type!="multi":
@@ -171,13 +180,14 @@ with PdfPages("{}/{}/fit_reconstructions.pdf".format(outdir,fit_name)) as pdf:
 
         ### create the plot
         with uproot.open(outfile) as f:
+            datasets=["{}_{}".format(dataset_name,det_type.split("/")[1]) for dataset_name in dataset_names]
 
             ## loop over datasets
             hs={}
             #for ds, ax, title in zip(datasets, axes.flatten(), labels):
             for i in range(len(datasets)):
                 ds = datasets[i]   
-                
+
                 if (det_type=="multi"):
                         title=labels[i]
                 else:
@@ -285,54 +295,53 @@ with PdfPages("{}/{}/fit_reconstructions.pdf".format(outdir,fit_name)) as pdf:
 
                     
                         ### rescale bin contents
-                        for i in range(hs[comp][type_plot].size - 2):
-                            E=hs[comp][type_plot].axes.centers[0][i]
+                        for b in range(hs[comp][type_plot].size - 2):
+                            E=hs[comp][type_plot].axes.centers[0][b]
                     
-                            if hs[comp][type_plot][i] == 0:
-                                hs[comp][type_plot][i] = 1.05*ylowlim
+                            if hs[comp][type_plot][b] == 0:
+                                hs[comp][type_plot][b] = 1.05*ylowlim
 
                             ### scale the value to be in units of cts/10 keV
                             if (get_originals==False):
-                                hs[comp][type_plot][i]*=10./bin_widths[i]
+                                hs[comp][type_plot][b]*=10./bin_widths[b]
                             
                         
                         hs[comp][type_plot].plot(ax=axes_full[0], **style, **info["style"])
                     
 
                     ### ----------- save gamma lines info --------
-
                     ### if the peak belongs to a gamma line save it
                     low=4000
                     high=0
-                    for i in range(hs["total_model"][type_plot].size - 2):
-                        E=hs["total_model"][type_plot].axes.centers[0][i]   
-                        bw=bin_widths[i]
+                    for b in range(hs["total_model"][type_plot].size - 2):
+                        E=hs["total_model"][type_plot].axes.centers[0][b]   
+                        bw=bin_widths[b]
                         ### get first and last non-0 bin
                     
-                        if ((hs["total_model"][type_plot][i].value*bw/10>1.1*ylowlim) and (E<low)):
+                        if ((hs["total_model"][type_plot][b].value*bw/10>1.1*ylowlim) and (E<low)):
                             low=E
-                        if ((hs["total_model"][type_plot][i].value*bw/10>1.1*ylowlim) and (E>high)):
+                        if ((hs["total_model"][type_plot][b].value*bw/10>1.1*ylowlim) and (E>high)):
                             high=E
-                        if (hs["total_model"][type_plot][i].value*bw/10<1.1):
+                        if (hs["total_model"][type_plot][b].value*bw/10<1.1):
                             continue
-                        bw = bin_widths[i] 
+                        bw = bin_widths[b] 
                         ### loop over different gamma plots
 
-                        for plot_type,gamma_info in gamma_line_plots.items():
+                        for plot_type,gamma_info in gamma_line_plots[i].items():
                             for gamma_counter in range(len(gamma_info["lines"])):
-                                if ( (gamma_counter)<len(gamma_info["lines"]) and (abs(E-gamma_info["lines"][gamma_counter])<bin_widths[i]/2)):
+                                if ( (gamma_counter)<len(gamma_info["lines"]) and (abs(E-gamma_info["lines"][gamma_counter])<bin_widths[b]/2)):
                                     
-                                    gamma_info["model"].append(hs["total_model"][type_plot][i].value*bw/10)
-                                    if (isinstance(hs["data"][type_plot][i],float)):
-                                        gamma_info["data"].append(hs["data"][type_plot][i]*(bw)/10)
+                                    gamma_info["model"].append(hs["total_model"][type_plot][b].value*bw/10)
+                                    if (isinstance(hs["data"][type_plot][b],float)):
+                                        gamma_info["data"].append(hs["data"][type_plot][b]*(bw)/10)
                                     else:
-                                        gamma_info["data"].append(hs["data"][type_plot][i].value*(bw)/10)
+                                        gamma_info["data"].append(hs["data"][type_plot][b].value*(bw)/10)
 
                                     gamma_info["names"].append("{}".format(str(gamma_info["lines"][gamma_counter])))
                                     gamma_info["count"]+=1
 
 
-                    for plot_type,gamma_info in gamma_line_plots.items():
+                    for plot_type,gamma_info in gamma_line_plots[i].items():
                         gamma_info["groups"].append(gamma_info["count"])
                     
                     if (det_type=="sum" and ds!=datasets[-1]):
@@ -370,27 +379,24 @@ with PdfPages("{}/{}/fit_reconstructions.pdf".format(outdir,fit_name)) as pdf:
                             idx+=1
                   
                     ### show some excluded region (eg ROI)
-                 
-
                     ### annotate plot
                 
-                    if ds == datasets[0] or det_type=="sum":
-                        legend=axes_full[0].legend(loc='upper right',edgecolor="black",frameon=True, facecolor='white',framealpha=1,ncol=1,fontsize=6
-                                        )
-                        axes_full[0].set_legend_annotation()
+               
+                    legend=axes_full[0].legend(loc='upper right',edgecolor="black",frameon=True, facecolor='white',framealpha=1,ncol=1,fontsize=6)                   
+                    axes_full[0].set_legend_annotation()
 
-                        
-                    elif ds==datasets[len(datasets)-1]:
-                        axes_full[0].xaxis.set_tick_params(top=False)
-                        axes_full[0].set_legend_logo(position='upper right', logo_type = 'preliminary', scaling_factor=10)
-                    else:
-                        axes_full[0].xaxis.set_tick_params(top=False)
 
                     ### annotate the type of fit
                     if (det_type!="multi"):
                         axes_full[0].set_legend_logo(position='upper left', logo_type = 'preliminary', scaling_factor=10)
                         
-                        axes_full[0].annotate("Fit of {} ".format(title),(0.2,0.91),xycoords="axes fraction",fontsize=10)
+                        if ( "livetime" in cfg_dict["fit"]["theoretical-expectations"][ds_files[i]][det_type]):
+                            livetime = cfg_dict["fit"]["theoretical-expectations"][ds_files[i]][det_type]["livetime"]
+                        else:
+                            livetime =cfg_dict["livetime"]
+                        
+                        axes_full[0].annotate("Fit of {} - livetime {:0.2g} yr".format(utils.format(title),
+                                                                                       livetime),(0.5,0.8),xycoords="axes fraction",fontsize=9)
                         
 
 
@@ -446,61 +452,63 @@ with PdfPages("{}/{}/fit_reconstructions.pdf".format(outdir,fit_name)) as pdf:
 
     #### make the gamma line plot
     ### ---------------------------------------------------------
-    for gamma,gamma_data in gamma_line_plots.items():
+    for i,dn in enumerate(dataset_names):                    
+        for gamma,gamma_data in gamma_line_plots[i].items():
+                
+            gamma_line_data=gamma_data["data"]
+            gamma_line_model=gamma_data["model"]
+            gamma_index_groups=gamma_data["groups"]
+            hist_names=gamma_data["names"]
+            fig, axes_full = lps.subplots(2, 1, figsize=(7, y), sharex=True, gridspec_kw = { 'height_ratios': [8, 2],"hspace":0})
+            axes=axes_full[0]
+            gamma_hist =( Hist.new.Reg(len(gamma_line_data),0,len(gamma_line_data)).Double()
+                        )
+            gamma_hist_data =( Hist.new.Reg(len(gamma_line_model),0,len(gamma_line_model)).Double()
+                        )
             
-        gamma_line_data=gamma_data["data"]
-        gamma_line_model=gamma_data["model"]
-        gamma_index_groups=gamma_data["groups"]
-        hist_names=gamma_data["names"]
-        fig, axes_full = lps.subplots(2, 1, figsize=(7, y), sharex=True, gridspec_kw = { 'height_ratios': [8, 2],"hspace":0})
-        axes=axes_full[0]
-        gamma_hist =( Hist.new.Reg(len(gamma_line_data),0,len(gamma_line_data)).Double()
-                    )
-        gamma_hist_data =( Hist.new.Reg(len(gamma_line_model),0,len(gamma_line_model)).Double()
-                    )
-        
-        for i in range(gamma_hist_data.size-2):
-            gamma_hist[i]=gamma_line_model[i]
-            gamma_hist_data[i]=gamma_line_data[i]
+            for i in range(gamma_hist_data.size-2):
+                gamma_hist[i]=gamma_line_model[i]
+                gamma_hist_data[i]=gamma_line_data[i]
 
-        ### now make the histos
-        gamma_hist_data.plot(ax=axes,**style,color=vset.blue,alpha=0.25,histtype="fill")
+            ### now make the histos
+            gamma_hist_data.plot(ax=axes,**style,color=vset.blue,alpha=0.25,histtype="fill")
 
-        gamma_hist.plot(ax=axes,**style,color="black")
-        axes.set_xlim(0,len(gamma_line_data))
-        axes.set_ylabel("counts/10 keV")
-        axes.set_ylim(0.1,1.2*np.max(gamma_hist.values()))
-        axes.set_yscale("linear")
-        for x in gamma_index_groups:
-            axes.axvline(x=x,linewidth=0.4)
+            gamma_hist.plot(ax=axes,**style,color="black")
+            axes.set_xlim(0,len(gamma_line_data))
+            axes.set_ylabel("counts/10 keV")
+            axes.set_ylim(0.1,1.2*np.max(gamma_hist.values()))
+            axes.set_yscale("linear")
+            for x in gamma_index_groups:
+                axes.axvline(x=x,linewidth=0.4)
 
-        axes.set_xlabel("")
-        axes_full[1].set_xticks(np.arange(len(gamma_line_model))+0.5, hist_names,rotation=90,fontsize=10)
-        axes_full[1].set_ylabel("Residual")
-        axes_full[1].axhspan(-3,3,color="red",alpha=0.5,linewidth=0)
-        axes_full[1].axhspan(-2,2,color="gold",alpha=0.5,linewidth=0)
-        axes_full[1].axhspan(-1,1,color="green",alpha=0.5,linewidth=0)
+            axes.set_xlabel("")
+            axes_full[1].set_xticks(np.arange(len(gamma_line_model))+0.5, hist_names,rotation=90,fontsize=10)
+            axes_full[1].set_ylabel("Residual")
+            axes_full[1].axhspan(-3,3,color="red",alpha=0.5,linewidth=0)
+            axes_full[1].axhspan(-2,2,color="gold",alpha=0.5,linewidth=0)
+            axes_full[1].axhspan(-1,1,color="green",alpha=0.5,linewidth=0)
 
-        plt.tight_layout()
-        c=0
-        for de in type_names:
-            if (gamma_index_groups[c]!=gamma_index_groups[c+1]):
-                axes.annotate(de, ((1/len(gamma_line_model))*(gamma_index_groups[c]+gamma_index_groups[c+1])/2, 0.91), xycoords="axes fraction", fontsize=6,ha="center")
-            c+=1
-        ### make a residuals
+            plt.tight_layout()
+            c=0
+            for de in type_names:
+                if (gamma_index_groups[c]!=gamma_index_groups[c+1]):
+                    axes.annotate(de, ((1/len(gamma_line_model))*(gamma_index_groups[c]+gamma_index_groups[c+1])/2, 0.91), xycoords="axes fraction", fontsize=6,ha="center")
+                c+=1
+            ### make a residuals
 
-        data = gamma_hist_data.values()
-        pred = gamma_hist.values()
-        rs=[]
-        for d,p in zip(data,pred):
-            rs.append(utils.normalized_poisson_residual(p,d))
+            data = gamma_hist_data.values()
+            pred = gamma_hist.values()
+            rs=[]
+            for d,p in zip(data,pred):
+                rs.append(utils.normalized_poisson_residual(p,d))
 
-        rs=np.array(rs)
-        bins = gamma_hist.axes.centers[0]
-        axes_full[1].errorbar(bins,rs,fmt="o",color="black",markersize=1,linewidth=1)
-        axes_full[1].set_ylim(-max(4,max(abs(rs)))-1,max(4,max(abs(rs)))+1)
-        
-        if (save):
-            pdf.savefig()
-        else:
-            plt.show()
+            rs=np.array(rs)
+            bins = gamma_hist.axes.centers[0]
+            axes_full[1].errorbar(bins,rs,fmt="o",color="black",markersize=1,linewidth=1)
+            axes_full[1].set_ylim(-max(4,max(abs(rs)))-1,max(4,max(abs(rs)))+1)
+            fig.suptitle(dn)
+            plt.tight_layout()
+            if (save):
+                pdf.savefig()
+            else:
+                plt.show()

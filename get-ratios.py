@@ -177,10 +177,12 @@ def main():
         "lw": 0.2,
     }
 
-    data_path="../hmixfit/inputs/data/datasets/l200a-vancouver23-dataset-v0.3_manipulation_v0.1.root"
-    pdf_path = "../hmixfit/inputs/pdfs/l200a-pdfs_vancouver23_v5.0/l200a-pdfs_manipulation_v0.1/"
-    cats=[1,2,3]
-    groups=["icpc","bege","ppc","coax","top","mid_top","mid","mid_bottom","bottom"]
+    data_path="../hmixfit/inputs/data/datasets/l200a-vancouver23-dataset-v1.0.0.root"
+    pdf_path = "../hmixfit/inputs/pdfs/l200a-pdfs_vancouver23_v6.0/l200a-pdfs.0/"
+    cats=["cat_1","cat_2","cat_3"] #,"sd_0","sd_1","sd_2","sd_3","sd_4","sd_5"]
+    m2_cats=["all","cat_1","cat_2","cat_3"] #,"sd_0","sd_1","sd_2","sd_3","sd_4","sd_5"]
+
+    groups=["icpc","bege","ppc","coax"] #,"top","mid_top","mid","mid_bottom","bottom"]
     histo_cats=[]
     histo_groups={}
     with uproot.open(data_path,object_cache=None) as f:
@@ -188,7 +190,7 @@ def main():
         histo_m1=f["mul_surv"]["all"].to_hist()
 
         for cat in cats:
-            histo_cats.append(f["mul2_surv_2d_cat{}".format(cat)]["all"].to_hist())
+            histo_cats.append(f["mul2_surv_2d"][cat].to_hist())
 
         for group in groups:
             histo_groups[group]=f["mul_surv"][group].to_hist()
@@ -241,7 +243,7 @@ def main():
         histo_d = utils.select_region(histo,[{"var":"e2","greater":True,"val":500}])
 
         histos=[histo,histo_a,histo_b,histo_c,histo_d,histo_cats[0],histo_cats[1],histo_cats[2]]
-        names=["full","a","b","c","d","cat1","cat2","cat3"]
+        names=["full","a","b","c","d","cat_1","cat_2","cat_3"]
 
     if (make_2D_plots):
         
@@ -325,7 +327,7 @@ def main():
         data_counts={}
         histos=[histo]
         histos.extend(histo_cats)
-        names=["all","cat1","cat2","cat3"]
+        names=["all","cat_1","cat_2","cat_3"] #"sd_0","sd_1","sd_2","sd_3","sd_4","sd_5"]
         names.extend(groups)
         for i in range(len(groups)):
             histos.append(None)
@@ -337,19 +339,19 @@ def main():
             data_counts[n]={}
             for s in spectra:
                 if s=="mul_surv":
-                    if (n in ["cat1","cat2","cat3"]):
+                    if (n not in ["all","icpc","bege","coax","ppc"]):
                         continue
                     h1D= histo_groups[n]
                 elif s=="mul2_e1":
-                    if (n not in ["all","cat1","cat2","cat3"]):
+                    if (n not in m2_cats):
                         continue
                     h1D = h.project(1)
                 elif s=="mul2_e2":
-                    if (n not in ["all","cat1","cat2","cat3"]):
+                    if (n not in m2_cats):
                         continue
                     h1D = h.project(0)
                 else:
-                    if (n not in ["all","cat1","cat2","cat3"]):
+                    if (n not in m2_cats):
                         continue
                     h1D = utils.project_sum(h)
                 data_counts[n][s]={}
@@ -430,10 +432,12 @@ def main():
     #### --------------------------------
     else:
         ratios_data={"all":{"mul_surv":{},"mul2_sum":{},"mul2_e1":{},"mul2_e2":{}}}
-        ratios_data["cat1"]={"mul_surv":{},"mul2_sum":{},"mul2_e1":{},"mul2_e2":{}}
-        ratios_data["cat2"]={"mul_surv":{},"mul2_sum":{},"mul2_e1":{},"mul2_e2":{}}
-        ratios_data["cat3"]={"mul_surv":{},"mul2_sum":{},"mul2_e1":{},"mul2_e2":{}}
 
+        for cat in m2_cats:
+      
+            
+            ratios_data[cat]={"mul_surv":{},"mul2_sum":{},"mul2_e1":{},"mul2_e2":{}}
+       
 
         data_counts={"all":{"mul_surv":{},"mul2_sum":{},"mul2_e1":{},"mul2_e2":{}}}
 
@@ -445,7 +449,7 @@ def main():
 
         with open(gamma_line_groups_path, "r") as json_file:
             gamma_line_groups = json.load(json_file)
-        print(json.dumps(gamma_line_groups,indent=1))
+
         with open(gamma_line_M2_path, "r") as json_file:
             gamma_line_M2 = json.load(json_file)
 
@@ -480,25 +484,25 @@ def main():
         ratios_data["all"]["mul2_e2"]["609"]=quantiles_to_sym_error(gamma_line_M2["All"]["raw"]["609M2E2_over_1764M1"])
 
 
-        ratios_data["cat1"]["mul2_e1"]["2615"]=quantiles_to_sym_error(gamma_line_M2_cats["All"]["raw"]["2615M2cat1_over_2615M2all_e1"])
-        ratios_data["cat2"]["mul2_e1"]["2615"]=quantiles_to_sym_error(gamma_line_M2_cats["All"]["raw"]["2615M2cat2_over_2615M2all_e1"])
-        ratios_data["cat3"]["mul2_e1"]["2615"]=quantiles_to_sym_error(gamma_line_M2_cats["All"]["raw"]["2615M2cat3_over_2615M2all_e1"])
+        ratios_data["cat_1"]["mul2_e1"]["2615"]=quantiles_to_sym_error(gamma_line_M2_cats["All"]["raw"]["2615M2cat1_over_2615M2all_e1"])
+        ratios_data["cat_2"]["mul2_e1"]["2615"]=quantiles_to_sym_error(gamma_line_M2_cats["All"]["raw"]["2615M2cat2_over_2615M2all_e1"])
+        ratios_data["cat_3"]["mul2_e1"]["2615"]=quantiles_to_sym_error(gamma_line_M2_cats["All"]["raw"]["2615M2cat3_over_2615M2all_e1"])
 
-        ratios_data["cat1"]["mul2_e1"]["583"]=quantiles_to_sym_error(gamma_line_M2_cats["All"]["raw"]["583M2cat1_over_583M2all_e1"])
-        ratios_data["cat2"]["mul2_e1"]["583"]=quantiles_to_sym_error(gamma_line_M2_cats["All"]["raw"]["583M2cat2_over_583M2all_e1"])
-        ratios_data["cat3"]["mul2_e1"]["583"]=quantiles_to_sym_error(gamma_line_M2_cats["All"]["raw"]["583M2cat3_over_583M2all_e1"])
+        ratios_data["cat_1"]["mul2_e1"]["583"]=quantiles_to_sym_error(gamma_line_M2_cats["All"]["raw"]["583M2cat1_over_583M2all_e1"])
+        ratios_data["cat_2"]["mul2_e1"]["583"]=quantiles_to_sym_error(gamma_line_M2_cats["All"]["raw"]["583M2cat2_over_583M2all_e1"])
+        ratios_data["cat_3"]["mul2_e1"]["583"]=quantiles_to_sym_error(gamma_line_M2_cats["All"]["raw"]["583M2cat3_over_583M2all_e1"])
 
-        ratios_data["cat1"]["mul2_e1"]["609"]=quantiles_to_sym_error(gamma_line_M2_cats["All"]["raw"]["609M2cat1_over_609M2all_e1"])
-        ratios_data["cat2"]["mul2_e1"]["609"]=quantiles_to_sym_error(gamma_line_M2_cats["All"]["raw"]["609M2cat2_over_609M2all_e1"])
-        ratios_data["cat3"]["mul2_e1"]["609"]=quantiles_to_sym_error(gamma_line_M2_cats["All"]["raw"]["609M2cat3_over_609M2all_e1"])
+        ratios_data["cat_1"]["mul2_e1"]["609"]=quantiles_to_sym_error(gamma_line_M2_cats["All"]["raw"]["609M2cat1_over_609M2all_e1"])
+        ratios_data["cat_2"]["mul2_e1"]["609"]=quantiles_to_sym_error(gamma_line_M2_cats["All"]["raw"]["609M2cat2_over_609M2all_e1"])
+        ratios_data["cat_3"]["mul2_e1"]["609"]=quantiles_to_sym_error(gamma_line_M2_cats["All"]["raw"]["609M2cat3_over_609M2all_e1"])
 
-        ratios_data["cat1"]["mul2_e2"]["583"]=quantiles_to_sym_error(gamma_line_M2_cats["All"]["raw"]["583M2cat1_over_583M2all_e2"])
-        ratios_data["cat2"]["mul2_e2"]["583"]=quantiles_to_sym_error(gamma_line_M2_cats["All"]["raw"]["583M2cat2_over_583M2all_e2"])
-        ratios_data["cat3"]["mul2_e2"]["583"]=quantiles_to_sym_error(gamma_line_M2_cats["All"]["raw"]["583M2cat3_over_583M2all_e2"])
+        ratios_data["cat_1"]["mul2_e2"]["583"]=quantiles_to_sym_error(gamma_line_M2_cats["All"]["raw"]["583M2cat1_over_583M2all_e2"])
+        ratios_data["cat_2"]["mul2_e2"]["583"]=quantiles_to_sym_error(gamma_line_M2_cats["All"]["raw"]["583M2cat2_over_583M2all_e2"])
+        ratios_data["cat_3"]["mul2_e2"]["583"]=quantiles_to_sym_error(gamma_line_M2_cats["All"]["raw"]["583M2cat3_over_583M2all_e2"])
 
-        ratios_data["cat1"]["mul2_e2"]["609"]=quantiles_to_sym_error(gamma_line_M2_cats["All"]["raw"]["609M2cat1_over_609M2all_e2"])
-        ratios_data["cat2"]["mul2_e2"]["609"]=quantiles_to_sym_error(gamma_line_M2_cats["All"]["raw"]["609M2cat2_over_609M2all_e2"])
-        ratios_data["cat3"]["mul2_e2"]["609"]=quantiles_to_sym_error(gamma_line_M2_cats["All"]["raw"]["609M2cat3_over_609M2all_e2"])
+        ratios_data["cat_1"]["mul2_e2"]["609"]=quantiles_to_sym_error(gamma_line_M2_cats["All"]["raw"]["609M2cat1_over_609M2all_e2"])
+        ratios_data["cat_2"]["mul2_e2"]["609"]=quantiles_to_sym_error(gamma_line_M2_cats["All"]["raw"]["609M2cat2_over_609M2all_e2"])
+        ratios_data["cat_3"]["mul2_e2"]["609"]=quantiles_to_sym_error(gamma_line_M2_cats["All"]["raw"]["609M2cat3_over_609M2all_e2"])
 
         ratios_data["all"]["mul2_e1"]["583"]=quantiles_to_sym_error(gamma_line_M2["All"]["raw"]["583M2E1_over_2615M1"])
         ratios_data["all"]["mul2_e1"]["609"]=quantiles_to_sym_error(gamma_line_M2["All"]["raw"]["609M2E1_over_1764M1"])
@@ -551,7 +555,7 @@ def main():
     #### -------------------------------------------
 
     if plot_data_1D:
-        names=["cat1","cat2","cat3"]
+        names=["cat_1","cat_2","cat_3"]
         bin=5
         colors=[vset.blue,vset.magenta,vset.teal]
         for spec,spec_name in zip([0,1,2],["Energy 2","Energy 1","Energy 1 + Energy 2"]):
@@ -616,7 +620,6 @@ def main():
 
     m1_cats=["all"]
     m1_cats.extend(groups)
-    m2_cats=["all","cat1","cat2","cat3"]
 
     ### same for the MC
     ## -------------------------------------------------------------------------
@@ -627,12 +630,12 @@ def main():
 
     if (compute_mc):
         list_of_mc_files= os.listdir(pdf_path)
-        print(list_of_mc)
+
         mc ={"mul2_sum":{},"mul2_e1":{},"mul2_e2":{}}
         ## save mc output into a dictonary
         mc_counts={}
 
-        cats=["all","cat1","cat2","cat3"]
+        cats=["all","cat_1","cat_2","cat_3"] #"sd_0","sd_1","sd_2","sd_3","sd_4","sd_5"]
         cats.extend(groups)
         mc={}
         for comp in tqdm(list_of_mc):
@@ -652,12 +655,12 @@ def main():
                         if (cat=="all"):    
                             mc[name][cat]["mul2_e2"]=f["mul2_surv_2d"]["all"].to_hist()[0:3300,0:3300].project(0)
                             mc[name][cat]["mul2_e1"]=f["mul2_surv_2d"]["all"].to_hist()[0:3300,0:3300].project(1)
-                            histo_mc =f["mul2_surv_2d".format(cat)]["all"].to_hist()[0:3300,0:3300]
+                            histo_mc =f["mul2_surv_2d"][cat].to_hist()[0:3300,0:3300]
 
                         else:
-                            mc[name][cat]["mul2_e2"]=f["mul2_surv_2d_{}".format(cat)]["all"].to_hist()[0:3300,0:3300].project(0)
-                            mc[name][cat]["mul2_e1"]=f["mul2_surv_2d_{}".format(cat)]["all"].to_hist()[0:3300,0:3300].project(1)
-                            histo_mc = f["mul2_surv_2d_{}".format(cat)]["all"].to_hist()[0:3300,0:3300]
+                            mc[name][cat]["mul2_e2"]=f["mul2_surv_2d"][cat].to_hist()[0:3300,0:3300].project(0)
+                            mc[name][cat]["mul2_e1"]=f["mul2_surv_2d"][cat].to_hist()[0:3300,0:3300].project(1)
+                            histo_mc = f["mul2_surv_2d"][cat].to_hist()[0:3300,0:3300]
 
                         histo_mc_M1 =f["mul_surv"]["all"].to_hist()
                     ##### extract the 1D histos
@@ -670,7 +673,7 @@ def main():
                 else:
                     mc[name][cat]={"mul_surv":{}}
                     mc_counts[name][cat]={}
-                    with uproot.open(pdf_path+file) as f:
+                    with uproot.open(pdf_path+file,object_cache=None) as f:
                                     
                         histo_mc_M1 =f["mul_surv"][cat].to_hist()
 
@@ -852,14 +855,14 @@ def main():
 
     #### now loop over ratios
 
-    orders=["pen_plates","front_end_electronics","hpge_insulators","hpge_support_copper","cables","mini_shroud","fiber_inner","fiber_shroud","fiber_outer","fiber_copper_inner","fiber_copper","fiber_copper_outer","sipm","birds_nest","wls_reflector"]
-    orders=["fiber_inner","fiber_shroud","fiber_outer","fiber_copper_inner","fiber_copper","fiber_copper_outer"]
+    orders=["pen_plates","front_end_electronics","hpge_insulators","hpge_support_copper","cables","mini_shroud","calibration_tubes","fiber_copper_inner","fiber_copper_outer","sipm","birds_nest","wls_reflector"]
+    #orders=["fiber_inner","fiber_shroud","fiber_outer","fiber_copper_inner","fiber_copper","fiber_copper_outer"]
     if (get_from_data==False):
         extra="_gla_fibers"
     else:
         extra=""
 
-    make_all_plots=False
+    make_all_plots=True
     if make_all_plots==True:
         for cat in ratios_data:
             for spec in ratios_data[cat]:
@@ -915,17 +918,17 @@ def main():
                     plt.close()
 
     #### ratios of categorie
-    plot_categories=True          
+    plot_categories=False        
 
     print(json.dumps(ratios_data,indent=1))
 
     if (plot_categories):
-        cata="cat1"
+        cata="cat_1"
         catb="all"
         #orders=["pen_plates","front_end_electronics","hpge_insulators","hpge_support_copper","cables","mini_shroud","fiber_shroud","fiber_copper"]
-        orders=["pen_plates","front_end_electronics","hpge_insulators","hpge_support_copper","cables","mini_shroud","fiber_inner","fiber_shroud","fiber_outer","fiber_copper_inner","fiber_copper","fiber_copper_outer"]
+        #orders=["pen_plates","front_end_electronics","hpge_insulators","hpge_support_copper","cables","mini_shroud","calibration_tubes","fiber_inner","fiber_shroud","fiber_outer","fiber_copper_inner","fiber_copper","fiber_copper_outer"]
 
-        for cat,name in zip(["cat1","cat2","cat3"],["same-str-adj","same-str-not-adj","diff-str"]):
+        for cat,name in zip(["cat_1","cat_2","cat_3"],["same-str-adj","same-str-not-adj","diff-str"]):
             for peak in ["609","583","2615"]:
                 for spec in ["mul2_e1","mul2_e2"]:
                     if (not peak in ratios_data[cat][spec]):
@@ -965,9 +968,9 @@ def main():
                     
                     #plt.show()
         plt.close("all")
-        cata="cat1"
+        cata="cat_1"
         catb="all"
-        orders=["pen_plates","front_end_electronics","hpge_insulators","hpge_support_copper","cables","mini_shroud","fiber_inner","fiber_shroud","fiber_outer","fiber_copper_inner","fiber_copper","fiber_copper_outer"]
+        #orders=["pen_plates","front_end_electronics","hpge_insulators","hpge_support_copper","cables","mini_shroud","calibration_tubes","fiber_inner","fiber_shroud","fiber_outer","fiber_copper_inner","fiber_copper","fiber_copper_outer"]
         cat="all"
 
         

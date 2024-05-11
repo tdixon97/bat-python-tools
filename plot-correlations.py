@@ -59,7 +59,7 @@ with open(cfg_path,"r") as file:
     cfg =json.load(file)
 
 ### extract all we need from the cfg dict
-fit_name,out_dir,_,_,dataset_name=utils.parse_cfg(cfg)
+fit_name,out_dir,_,_,dataset_names,_=utils.parse_cfg(cfg)
 outfile = out_dir+"/hmixfit-"+fit_name+"/mcmc_small.root"
 os.makedirs(outdir+"/"+fit_name,exist_ok=True)
 

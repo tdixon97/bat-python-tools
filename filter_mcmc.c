@@ -16,9 +16,7 @@ void filter_mcmc(TString path)
     std::ifstream file(path);
     json data;
     file >> data;
-   
    TString data_path =TString("../hmixfit/"+(std::string)data["output-dir"]+"/hmixfit-"+(std::string)data["id"]+"/mcmc.root");
-
    TFile *f1 = new TFile(TString(data_path));
    data_path.Remove(data_path.Length()-5);
    // Get the key name

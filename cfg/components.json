@@ -85,6 +85,7 @@
 	"K42_above",
 	"K42_inside",
 	"K42_outside",
+  "K42_outside_p10",
 	"K42_hpge_shell",
 	"K42_hpge_surface",
 	"K42_hpge_surface_icpc",
@@ -92,6 +93,7 @@
 	"K42_hpge_surface_ppc",
 	"K42_hpge_surface_coax",
 	"K42_mini_shroud",
+  "K42_mini_shroud_p10",
 	"K42_cables"
     ],
     "style": {

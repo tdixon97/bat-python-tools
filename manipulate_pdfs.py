@@ -20,6 +20,14 @@ import numpy as np
 from IPython.display import display
 import pandas as pd
 from tqdm import tqdm
+import logging
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+stream_handler = logging.StreamHandler()
+stream_handler.setLevel(logging.DEBUG)
+formatter = logging.Formatter("%(asctime)s: %(message)s")
+stream_handler.setFormatter(formatter)
+logger.addHandler(stream_handler)
 
 
 
@@ -35,8 +43,8 @@ is_LEGEND=True
 
 #### LEGEND
 if (is_LEGEND):
-    pdf_path ="/home/tdixon/LEGEND/BackgroundModel/hmixfit/inputs/pdfs/l200a-pdfs_vancouver_full_v0.1/l200a-pdfs/"
-    data_path = "/home/tdixon/LEGEND/BackgroundModel/hmixfit/inputs/data/datasets/l200a-vancouver_full-dataset-v0.0.root"
+    pdf_path ="/home/tdixon/LEGEND/BackgroundModel/hmixfit/inputs/pdfs/l200a-pdfs_neutrino24_v0.0/l200a-pdfs/"
+    data_path = "/home/tdixon/LEGEND/BackgroundModel/hmixfit/inputs/data/datasets/l200a-neutrino24_v0.0.root"
     extra_label="0"
     list_of_pdfs =os.listdir(pdf_path)
     pdf_out_path =pdf_path[0:-1]+"."+extra_label+"/"
@@ -44,6 +52,7 @@ if (is_LEGEND):
     data_out_path=data_path[0:-5]+"."+extra_label+".root"
     m2_name ="mul2_surv_2d"
     m2_cats=["all","cat_1","cat_2","cat_3","sd_0","sd_1","sd_2","sd_3","sd_4","sd_5"]
+    
     m2_e1_out_name ="mul2_surv_e1"
     m2_e2_out_name ="mul2_surv_e2"
     is_sort_m2=False
@@ -52,7 +61,10 @@ if (is_LEGEND):
     output_list = [data_out_path]
     char_2_remove=2
 
-    #### GERDA
+    logger.info(f"Running with: PDF path {pdf_path}")
+    logger.info(f"              Data path {data_path}")
+    logger.info(f"              Extra label {extra_label}")
+
 else:
     is_sum=False
     data_path_pII = "/home/tdixon/LEGEND/BackgroundModel/hmixfit/inputs/data/datasets/gerda-data-bkgmodel-phaseII-v07.01-orig.root"
@@ -87,8 +99,8 @@ if (is_LEGEND):
         output_list.append(pdf_out_path+pdf)
 
 ### which manipulations to do
-is_pdf_per_string =True
-is_pdf_per_vertical_group = True
+is_pdf_per_string =False
+is_pdf_per_vertical_group = False
 is_m2_projections =True
 is_m2_group_projection=True
 is_peak_analysis_pdfs = True
@@ -114,17 +126,22 @@ peak_analysis = {
         }
 
 is_2D_M2=False
-is_first=True
-bins_2D= [200, 267, 287, 337, 387, 437, 501, 521, 573, 593, 599, 619, 669, 719, 758, 778, 828, 901, 921, 924, 944, 994, 1044, 1110, 1130, 1163, 1183, 1228, 1248, 1298, 1323, 1343, 1398, 1418, 1468, 1515, 1535, 1585, 1635, 1685, 1735, 1785, 1835, 1885, 1935, 1985, 2035, 2094, 2114, 2164, 2214, 2264, 2314, 2364, 2414, 2464, 2514, 2564, 2605, 2625, 2675, 2725, 2775, 2825, 2875, 2925, 2975, 3000]
+is_first=False
 
+logger.info(f"Produce string pdfs    : {is_pdf_per_string}")
+logger.info(f"Produce vertical pdfs  : {is_pdf_per_vertical_group}")
+logger.info(f"Produce vertical pdfs  : {is_pdf_per_vertical_group}")
+logger.info(f"Produce m2 projections : {is_m2_projections}, {is_m2_group_projection}")
+logger.info(f"Make rebinned 2D pdf   : {is_2D_M2}")
+logger.info(f"Make peak analysis pdfs: {is_peak_analysis_pdfs}")
 
 #### first open the data
 #### -----------------------------------
-for input_path,output_path in tqdm(zip(input_list,output_list),desc="Processing"):
+for input_path,output_path in zip(input_list,output_list):
     
-
+    logger.info(f">>> {input_path.split('/')[-1]} -> {output_path.split('/')[-1]}")
     with uproot.open(input_path,object_cache=None) as data_file:
-        if (is_first):
+        if (is_first is False):
             chans = get_list_channels(file=data_file)
             is_first=False
         hists= utils.get_list_of_not_directories(file  = data_file)
@@ -200,7 +217,7 @@ for input_path,output_path in tqdm(zip(input_list,output_list),desc="Processing"
                 if (is_LEGEND==False):
                     raise NotImplementedError("Groups are only implemented for LEGEND not GERDA")
                 
-                for cat in m2_cats:
+                for cat in ["all"]:
                     if (cat=="all"):
                         mul_spec = data_file["mul2_surv_2d/all"].to_hist()
                     else:
@@ -277,7 +294,7 @@ for input_path,output_path in tqdm(zip(input_list,output_list),desc="Processing"
                     output_file[m2_e2_out_name]=hist_e2
 
             if is_2D_M2==True:
-                for cat in m2_cats:
+                for cat in ["all"]:
                     
                     mul_spec= data_file[m2_name+"/all"].to_boost()[200:1500,200:3000]
                     

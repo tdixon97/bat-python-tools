@@ -390,7 +390,7 @@ def plot_corr(df:pd.DataFrame,i:int,j:int,labels:list,pdf=None):
 
 
 
-def get_data_numpy(type_plot:str,df_tot:pd.DataFrame,name:str)->tuple[np.ndarray,np.ndarray,np.ndarray,np.ndarray,float]:
+def get_data_numpy(type_plot:str,df_tot:pd.DataFrame,name:str,type="marg")->tuple[np.ndarray,np.ndarray,np.ndarray,np.ndarray,float]:
     """
     Get the data from the dataframe into some numpy arrays:
     Parameters:
@@ -405,7 +405,7 @@ def get_data_numpy(type_plot:str,df_tot:pd.DataFrame,name:str)->tuple[np.ndarray
     """
     if (type_plot=="parameter"):
 
-        x,y,y_low,y_high=get_from_df(df_tot,"fit_range",label="_{}".format(name))
+        x,y,y_low,y_high=get_from_df(df_tot,"fit_range",label="_{}".format(name),type=type)
         norm = np.array(df_tot["fit_range_orig_{}".format(name)])
         x=x/norm
         y=y/norm
@@ -445,17 +445,20 @@ def get_df_results(trees:list,dataset_name:str,specs:list,outfile:str)->pd.DataF
         ## get spectrum name and multiplicity
         ## ---------------------------------
         index = tree.find(dataset_name)
-   
+        print(index)
+        print(tree)
+        print(specs)
         if index != -1:  
             spec_name = tree[index +1+len(dataset_name):].split(";")[0]
             multi_string = [string for string in specs if spec_name in string]
+            print(spec_name)
+            print(multi_string)
             if (len(multi_string)!=1):
                 raise ValueError("Error we have multiple spectrum per dataset in the out file")
             else:
                 multi=multi_string[0].split("/")[0]
         else:
-            raise ValueError("Key in the file doesnt contain the data pattern ")
-    
+            continue
 
         df =pd.DataFrame(ttree2df_all(outfile,tree))
         df=df[df["fit_range_orig"]!=0]
@@ -617,8 +620,6 @@ def make_error_bar_plot(indexs,labels:list,y:np.ndarray,ylow:np.ndarray,yhigh:np
             xin_tmp = xin[categories==cat]
             axes.errorbar(y=xin_tmp,x=y_tmp,xerr=[ylow_tmp,yhigh_tmp],fmt="o",color=col,ecolor=col,markersize=1,label=cat)
 
-    print("Done")
-    ### add a band of the data           
     if data_band is not None:
         axes.axvline(x=data_band[0], color='red', linestyle='--', label='Data')
         axes.axvspan(xmin=data_band[0]-data_band[1],xmax=data_band[0]+data_band[2], color=vset.orange, alpha=0.3)
@@ -631,27 +632,29 @@ def make_error_bar_plot(indexs,labels:list,y:np.ndarray,ylow:np.ndarray,yhigh:np
         else:
             if (len(y)>0):
                 upper = np.max(y+1.5*yhigh)
+        if ((do_comp==True or split_priors==True) ):
+            upper=max(upper,np.max(y2+1.5*yhigh2))
 
-        if (do_comp==True or split_priors==True):
-            upper=max(3*upper,3*np.max(y2+1.5*yhigh2))
-
-
+        if (scale=="log"):
+            upper*=3
 
     axes.set_yticks(xin, labels)
 
     ## draw data band
     if (data_band is not None):
-        upper =data_band[0]+7*data_band[2]
+        upper =data_band[0]+2*data_band[2]
 
+    print(data_band)
+    print(upper)
 
     ### set the labels
     ### -------------------------
     if (obj=="fit_range"):
-        axes.set_xlabel("Reconstructed counts / yr in {} data".format(data))
+        axes.set_xlabel("Recon. counts / yr in {} data".format(data))
         axes.set_xlim(1,upper)
 
     elif (obj=="bi_range"):
-        axes.set_xlabel("Reconstructed bkg counts / yr in {} data".format(data))
+        axes.set_xlabel("Recon. bkg counts / yr in {} data".format(data))
         axes.set_xlim(low,upper)
     elif (obj=="scaling_factor"):
         axes.set_xlabel("Scaling factor [1/yr] ")
@@ -659,8 +662,12 @@ def make_error_bar_plot(indexs,labels:list,y:np.ndarray,ylow:np.ndarray,yhigh:np
     elif obj=="parameter":
         axes.set_xlabel("Activity [$\mu$Bq]")
         axes.set_xlim(low,upper)
+    elif obj=="frac":
+        axes.set_xlabel("Frac. of counts in {} [%]".format(data))
+        axes.set_xlim(1,upper)
+
     else:
-        axes.set_xlabel("Reconstructed counts / yr in {} data".format(obj))
+        axes.set_xlabel("Recon. counts / yr in {} data".format(obj))
         axes.set_xlim(1,upper)
 
     axes.set_yticks(axes.get_yticks())
@@ -770,15 +777,15 @@ def get_index_by_type(names):
     return {"U":index_U,"2nu":index_2nu,"Th":index_Th,"K":index_K}
 
 
-def get_from_df(df,obj,label=""):
+def get_from_df(df,obj,label="",type="marg"):
     """Get the index, y and errors from dataframe"""
    
     x=np.array(df.index)
-    if ("{}_marg_mod{}".format(obj,label) in df):
+    if ("{}_{}_mod{}".format(obj,type,label) in df):
         mode="mod"
     else:
         mode="mode"
-    y=np.array(df["{}_marg_{}{}".format(obj,mode,label)])
+    y=np.array(df["{}_{}_{}{}".format(obj,type,mode,label)])
     y_low = y-np.array(df["{}_qt16{}".format(obj,label)])
     y_high=np.array(df["{}_qt84{}".format(obj,label)])-y
     for i in range(len(y_low)):
@@ -788,6 +795,41 @@ def get_from_df(df,obj,label=""):
             y[i]=0
 
     return x,y,y_low,y_high
+def get_error_bar(N:float):
+    """
+    A poisson error-bar for N observed counts.
+    """
+
+    x= np.linspace(0,5+2*N,5000)
+    y=poisson.pmf(N,x)
+    integral = y[np.argmax(y)]
+    bin_id_l = np.argmax(y)
+    bin_id_u = np.argmax(y)
+
+    integral_tot = np.sum(y)
+    while integral<0.683*integral_tot:
+
+        ### get left bin
+        if (bin_id_l>0 and bin_id_l<len(y)):
+            c_l =y[bin_id_l-1]
+        else:
+            c_l =0
+
+        if (bin_id_u>0 and bin_id_u<len(y)):
+            c_u =y[bin_id_u+1]
+        else:
+            c_u =0
+        
+        if (c_l>c_u):
+            integral+=c_l
+            bin_id_l-=1
+        else:
+            integral+=c_u
+            bin_id_u+=1
+        
+    low_quant = x[bin_id_l]
+    high_quant=x[bin_id_u]
+    return N-low_quant,high_quant-N
 
 
 def integrate_hist(hist,low,high):
@@ -823,8 +865,22 @@ def get_total_efficiency(det_types,cfg,spectrum,regions,pdf_path,det_sel="all",m
     return eff_total
 
 
-def get_efficiencies(cfg,spectrum,det_type,regions,pdf_path,name,spectrum_fit="",mc_list=None,type_fit="icpc"):
-    """ Get the efficiencies"""
+def get_efficiencies(cfg,spectrum,det_type,regions,pdf_path,name,spectrum_fit="",mc_list=None,type_fit="icpc",idx=0):
+    """ Get the efficiencies or the fraction of events in a given spectrum depositing energy in each region.
+    Parameters:
+        -cfg (dict): the fit configuration file
+        - spectrum (str): name of the spectrum
+        - det_type (str): detector type to look at
+        - regions (dict): dictonary of regions to look at 
+        - pdf_path (str): path to the pdf files
+        - spectrum_fit (str): the spectrum used for the fit (to get the list of components)
+        - mc_list (list): list of MC files to consider
+        - type_fit (str): used to extract list of MC files
+        - idx (int ) : index of the datafile to look into
+    Returns
+        dict of the efficiencies
+    
+    """
 
     if (det_type in ["icpc","ppc","coax","bege"] and type_fit!="all"):
         type_fit=det_type
@@ -854,6 +910,8 @@ def get_efficiencies(cfg,spectrum,det_type,regions,pdf_path,name,spectrum_fit=""
         for key in cfg["fit"]["theoretical-expectations"].keys():
             if ".root" in key:
                 filename = key
+        filename=list(cfg["fit"]["theoretical-expectations"].keys())[idx]
+        print(filename)
         if "{}/{}".format(spectrum_fit,type_fit) in cfg["fit"]["theoretical-expectations"][filename]:
         
             icpc_comp_list=cfg["fit"]["theoretical-expectations"][filename]["{}/{}".format(spectrum_fit,type_fit)]["components"]
@@ -1079,7 +1137,9 @@ def plot_counting_calc(energies,data,values):
     plt.close()
 
 def plot_relative_intensities_triptych(outputs,data,data_err,orders,title,savepath,no_labels=False):
-    ### now loop over the keys
+    """
+    Make the triple plot for relative intesntiies
+    """
     
     vset = tc.tol_cset('vibrant')
 
@@ -1336,12 +1396,15 @@ def parse_cfg(cfg_dict:dict,replace_dash:bool=True)->tuple[str,str,str,list,list
         - the list of detector types, 
         - the ranges for each fit
         - the name of the dataset
+        - ds_names
     """
 
     fit_name=cfg_dict["id"]
     out_dir="../hmixfit/"+cfg_dict["output-dir"]
     det_types=[]
     ranges=[]
+    ds=[]
+    dataset_names=[]
     os.makedirs("plots/summary/{}".format(fit_name),exist_ok=True)
 
     for key in cfg_dict["fit"]["theoretical-expectations"]:
@@ -1356,11 +1419,12 @@ def parse_cfg(cfg_dict:dict,replace_dash:bool=True)->tuple[str,str,str,list,list
             elif 'fit-range-y' in cfg_dict["fit"]["theoretical-expectations"][key][spec]:
                                 ranges.append(cfg_dict["fit"]["theoretical-expectations"][key][spec]["fit-range-y"])
 
-        dataset_name =key[:-5]
-    if (replace_dash):
-        dataset_name=dataset_name.replace("-","_").replace(".","_")
+        dataset_names.append(key[:-5])
+        ds.append(key)
+        if (replace_dash):
+            dataset_names[-1]=dataset_names[-1].replace("-","_").replace(".","_")
 
-    return fit_name,out_dir,det_types,ranges,dataset_name
+    return fit_name,out_dir,det_types,ranges,dataset_names,ds
 
 def plot_mc_no_save(axes,pdf,name="",linewidth=0.6,range=(0,4000),color="blue"):
     
@@ -1373,7 +1437,15 @@ def plot_mc_no_save(axes,pdf,name="",linewidth=0.6,range=(0,4000),color="blue"):
     #pdf.plot(ax=axes, linewidth=0.8, yerr=False,flow= None,histtype="fill",alpha=0.15)
 
     return axes
+def format(title):
+    title=title.replace("M1","$\\mathtt{M1} $")
+    title=title.replace("M2","$\\mathtt{M2} $")
+    title=title.replace("coax"," COAX")
+    title=title.replace("bege"," BeGe")
+    title=title.replace("ppc"," PPC")
+    title=title.replace("icpc"," ICPC")
 
+    return title
 def compare_mc(max_energy,pdfs,decay,order,norm_peak,pdf,xlow,xhigh,scale,linewidth=0.6,colors=[]):
     """Compare MC files"""
     fig, axes = lps.subplots(1, 1,figsize=(6, 4), sharex=True, gridspec_kw = { "hspace":0})
@@ -1730,7 +1802,6 @@ def get_data_counts(spectrum:str,det_type:str,regions:dict,file):
     
     """
 
-
     if "{}/{}".format(spectrum,det_type) in file:
         hist =file["{}/{}".format(spectrum,det_type)]
     else:
@@ -1748,7 +1819,7 @@ def get_data_counts(spectrum:str,det_type:str,regions:dict,file):
             data+= float(integrate_hist(hist,rangel[i][0],rangel[i][1]))
         
         data_counts[region]=data
-
+    print(data_counts)
     return data_counts
 
 
@@ -1877,7 +1948,7 @@ def get_channels_map():
        
         string_channels[string]=channels_names
         string_types[string]=channels_types
-
+    print(string_channels)
     return string_channels,string_types
 
 
@@ -1948,10 +2019,12 @@ def get_livetime(verbose:bool=True)->float:
         analysis_runs=json.load(file) 
 
     analysis_runs = meta.dataprod.config.analysis_runs
-    print(json.dumps(analysis_runs,indent=1))
+    
     taup=0
     vancouver=0
+    neutrino =0
     p8=0
+    p9=0
     ### loop over periods
     for period in meta.dataprod.runinfo.keys():
         livetime_tot =0
@@ -1976,11 +2049,16 @@ def get_livetime(verbose:bool=True)->float:
             vancouver+=livetime_tot
         if (period=="p08"):
             p8 +=livetime_tot
+        if (period=="p09"):
+            p9+=livetime_tot
+
+        neutrino+=livetime_tot
+        
     if (verbose):
         print("Taup livetime = {}".format(taup/(60*60*24*365.25)))
         print("Vancouver livetime = {}".format(vancouver/(60*60*24*365.25)))
-        print("Vancouver Full livetime = {}".format((vancouver+p8)/(60*60*24*365.25)))
-
+        print("Vancouver Full livetime = {}".format((vancouver+p8+p9)/(60*60*24*365.25)))
+        print("nu24 livetime = {}".format(neutrino/((60*60*24*365.25))))
     return vancouver
 
 

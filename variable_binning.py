@@ -120,7 +120,6 @@ def compute_binning(gamma_energies=np.array([583,609,911,1460,1525,1764,2204,261
     if (blind is not None):
         bin_edges = np.array([low_energy,blind[0],blind[1],high_energy])
 
-    print(bin_edges)
     for i in range(len(gamma_energies)):
 
         ### check first for overlaps
@@ -146,7 +145,6 @@ def compute_binning(gamma_energies=np.array([583,609,911,1460,1525,1764,2204,261
         bin_edges=insert_bin(int(energy-gamma_binning/2),bin_edges)
         bin_edges=insert_bin(int(energy+gamma_binning/2),bin_edges)
 
-    print(bin_edges)
     bin_edges_only_gamma=bin_edges
 
     ### fill in the continuum
@@ -174,7 +172,6 @@ def compute_binning(gamma_energies=np.array([583,609,911,1460,1525,1764,2204,261
             else:           
                 stop=True
     
-    print(bin_edges)
     return np.unique(bin_edges)
 
 def remove_duplicates(bin_edges):

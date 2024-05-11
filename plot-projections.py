@@ -49,13 +49,14 @@ def main():
     parser.add_argument("-a","--save",type=int,help="Bool to save the plots ",default=1)
     parser.add_argument("-N","--step",type=int,help="Number of steps of the markov chain to take ",default=1000000)
     parser.add_argument("-O","--outdir",type=str,help="output directory to save plots",default="plots/summary/")
+    parser.add_argument("-i","--idx",type=int,help="Dataset idx to look into",default=0)
 
     args = parser.parse_args()
 
 
     ### parse the args
     cfg_file = args.cfg
-
+    idx=args.idx
     save = args.save
     spectrum = args.spectrum
     spectrum_fit="mul_surv"
@@ -75,12 +76,18 @@ def main():
 
     ### extract all we need from the cfg dict
 
-    fit_name,out_dir,_,_,dataset_name=utils.parse_cfg(cfg,replace_dash=False)
+    fit_name,out_dir,_,_,dataset_names,dss=utils.parse_cfg(cfg,replace_dash=False)
     outfile = out_dir+"/hmixfit-"+fit_name+"/mcmc_small.root"
     analysis = out_dir+"/hmixfit-"+fit_name+"/analysis.root"
 
     pdf_path = cfg["pdf-path"]
-    data_path=cfg["data-path"]+(dataset_name)+".root"
+    if "pdf-path" in cfg["fit"]["theoretical-expectations"][dss[idx]]["mul_surv/icpc"]:
+        pdf_path+="/"+cfg["fit"]["theoretical-expectations"][dss[idx]]["mul_surv/icpc"]["pdf-path"]
+    data_path=cfg["data-path"]+(dataset_names[idx])+".root"
+    if "livetime" in cfg:
+        livetime =cfg["livetime"]
+    else:
+        livetime=cfg["fit"]["theoretical-expectations"][dss[idx]]["mul_surv/icpc"]["livetime"]
     ### list of regions
     with open("cfg/regions.json","r") as file:
         regions =json.load(file)
@@ -92,21 +99,21 @@ def main():
     ### ---------------------------------------
     eff_total={}
     for det_name, det_info in det_types.items():
-        
+        print(spectrum)
         det_list=det_info["names"]
         effs ={}
         for reg in regions:
             effs[reg]={}
-
+        print(det_list)
         for det,named in zip(det_list,det_info["types"]):
-            eff_new,good = utils.get_efficiencies(cfg,spectrum,det,regions,pdf_path,named,spectrum_fit=spectrum_fit,type_fit=type_fit)
+            eff_new,good = utils.get_efficiencies(cfg,spectrum,det,regions,pdf_path,named,spectrum_fit=spectrum_fit,type_fit=type_fit,idx=idx)
         
             if (good==1 and (named==det_sel or det_sel==None)):
                 effs=utils.sum_effs(effs,eff_new)
 
         eff_total[det_name]=effs
 
-
+    print(json.dumps(eff_total,indent=1))
     ### now open the MCMC file
     if (det_type=="all" or det_type=="types"):
         tree= "{}_mcmc".format(fit_name)
@@ -212,8 +219,8 @@ def main():
                     fig, axes_full = lps.subplots(1, 1,figsize=(4, 3), sharex=True, gridspec_kw = { "hspace":0})
                     maxi=0
                     for group in groups:
-
-                        sums= sums_total[det_name][group][region]*cfg["livetime"]
+                        print(group,region)
+                        sums= sums_total[det_name][group][region]*livetime
                         
                         if (group=="all"):
                             rangef=(0,np.max(sums)*1.1)                
@@ -257,7 +264,6 @@ def main():
     ### ----------------------------------------------------------
 
     file = uproot.open(data_path)
-    time=cfg["livetime"]
     data_counts_total={}
 
     ## loop over datasets
@@ -297,7 +303,7 @@ def main():
                 #fig, axes_full = lps.subplots(1, 1,figsize=(4, 3), sharex=True, gridspec_kw = { "hspace":0})
 
                 
-                med = global_mode_total[det_name]['all'][key]*time
+                med = global_mode_total[det_name]['all'][key]*livetime
                 data_real = np.random.poisson(med,int(1e6))
                 
 

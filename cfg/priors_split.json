@@ -75,6 +75,14 @@
             "type":"icpms"
          },
          {
+            "name" : "Bi212Tl208_calibration_tubes",
+            "full-name":"Calibration-Tubes",
+           "file" : "l200a-calibration-tubes-Ra224-to-Pb208-tier_pdf.root",
+           "best_fit": 2.3E4,
+           "prior": "gaus:1,2.3E4,0.7E4",
+           "type":"icpms"
+        },
+         {
              "name" : "Bi212Tl208_pen_plates",
 	     "full-name":"PEN plates",
             "file" : "l200a-pen-plates-Ra224-to-Pb208-tier_pdf.root",
@@ -196,6 +204,15 @@
             "prior": "gaus:1,2.97E3,1.27E3",
             "type":"icpms"        
          },
+         {
+            "name" : "Pb214Bi214_calibration_tubes",
+            "full-name":"Calibration-Tubes",
+
+           "file" : "l200a-calibration-tubes-Rn222-to-Po214-tier_pdf.root",
+           "best_fit": 1.1E4,
+           "prior": "gaus:1,1.1E4,0.7E4",
+           "type":"icpms"
+        },
          {
              "name" : "Pb214Bi214_pen_plates",
 	     "full-name":"PEN plates",

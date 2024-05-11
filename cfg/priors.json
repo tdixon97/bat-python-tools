@@ -22,7 +22,7 @@
              "name" : "Bi212Tl208_fiber_shroud",
 	     "full-name":"Fiber Shroud",
             "file" : "l200a-fibers-Ra224-to-Pb208-tier_pdf.root",
-            "best_fit": 1.1E4,
+            "best_fit": 0,
             "prior": "exp(-x*2.3/1.7E4)",
             "type":"icpms"    
          },
@@ -34,6 +34,15 @@
             "file" : "l200a-mini-shroud-Ra224-to-Pb208-tier_pdf.root",
             "best_fit": 2.04E3,
             "prior": "gaus:1,2.04E3,7.60E2",
+            "type":"icpms"
+         },
+       
+         {
+             "name" : "Bi212Tl208_calibration_tubes",
+             "full-name":"Calibration-Tubes",
+            "file" : "l200a-calibration-tubes-Ra224-to-Pb208-tier_pdf.root",
+            "best_fit": 2.3E4,
+            "prior": "gaus:1,2.3E4,0.7E4",
             "type":"icpms"
          },
          {
@@ -200,6 +209,15 @@
             "prior": "gaus:1,2.97E3,1.27E3",
             "type":"icpms"        
          },
+          {
+             "name" : "Pb214Bi214_calibration_tubes",
+             "full-name":"Calibration-Tubes",
+
+            "file" : "l200a-calibration-tubes-Rn222-to-Po214-tier_pdf.root",
+            "best_fit": 1.1E4,
+            "prior": "gaus:1,1.1E4,0.7E4",
+            "type":"icpms"
+         },
          {
              "name" : "Pb214Bi214_pen_plates",
 	     "full-name":"PEN plates",
@@ -216,8 +234,7 @@
             "prior": "gaus:1,1.28E4,1.10E3",
             "type":"estimate"        
          },
-         {
-             "name" : "Pb214Bi214_front_end_electronics",
+         {             "name" : "Pb214Bi214_front_end_electronics",
 	     "full-name":"FE electronics",
 
             "file" : "l200a-front-end-electronics-Rn222-to-Po214-tier_pdf.root",

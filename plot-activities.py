@@ -27,6 +27,15 @@ vset = tc.tol_cset('vibrant')
 mset = tc.tol_cset('muted')
 plt.rc('axes', prop_cycle=plt.cycler('color', list(vset)))
 
+def remove_duplicated(listo,range):
+    list_new = []
+    range_new=[]
+    for item,range_tmp in zip(listo,range):
+        if item not in list_new:
+            list_new.append(item) 
+            range_new.append(range_tmp)
+    return list_new,range_new
+
 
 
 ### parse the arguments
@@ -42,13 +51,16 @@ parser.add_argument("-l","--labels",type=str,help="A list of labels (comma sep.)
 parser.add_argument("-O","--outdir",type=str,help="output directory to save plots",default="plots/summary/")
 parser.add_argument("-s","--save",type=int,help="save the plots? (1) or print to screen (0)?",default=True)
 parser.add_argument("-e","--energy",type=str,help="Energy range to use if the type if eff_groups",default=None)
+parser.add_argument("-S","--scale",type=str,help="Scale for the plots (default log)",default="log")
+parser.add_argument("-d","--data_band",type=bool,help="Boolean flat to overlay a data band ",default=False)
+parser.add_argument("-n","--norm",type=bool,help="Normalise by observed counts in data ",default=False)
 
 
-
+types="glob"
 
 ### set the parameters
 args = parser.parse_args()
-
+scale=args.scale
 cfg_path = args.cfg
 cfg_path_2=args.cfg_2
 json_file=args.components
@@ -59,17 +71,29 @@ l=utils.csv_string_to_list(args.labels,str)
 outdir=args.outdir
 priors_file = "cfg/priors.json"
 energy=args.energy
+data_band = args.data_band
+norm = args.norm
+idx=0
 if (energy is not None):
-    energy_low =float(energy.split(",")[0])
-    energy_high =float(energy.split(",")[1])
-
+    energy_low =int(energy.split(",")[0])
+    energy_high =int(energy.split(",")[1])
 
 
 with open(cfg_path,"r") as file:
     cfg =json.load(file)
+fit_name,out_dir,specs,ranges,dataset_names,dss=utils.parse_cfg(cfg)
+specs,ranges=remove_duplicated(specs,ranges)
 
-fit_name,out_dir,specs,_,dataset_name=utils.parse_cfg(cfg)
+pdf_sub_path=""
+if ("livetime" in cfg):
+    livetime=cfg["livetime"]
+else:
+    livetime =cfg["fit"]["theoretical-expectations"][dss[idx]][list(cfg["fit"]["theoretical-expectations"][dss[idx]].keys())[0]]["livetime"]
+    pdf_sub_path =cfg["fit"]["theoretical-expectations"][dss[idx]][list(cfg["fit"]["theoretical-expectations"][dss[idx]].keys())[0]]["pdf-path"]
+print(livetime)
+dataset_name=dataset_names[0]
 outfile = out_dir+"/hmixfit-"+fit_name+"/analysis.root"
+histofile =out_dir+"/hmixfit-"+fit_name+"/histograms.root"
 os.makedirs(outdir+"/"+fit_name,exist_ok=True)
 
 do_comp=False
@@ -78,7 +102,9 @@ if (cfg_path_2!=None):
     with open(cfg_path_2,"r") as file:
         cfg_2=json.load(file)
 
-    fit_name_2,out_dir_2,specs2,_,dataset_name_2=utils.parse_cfg(cfg_2)
+    fit_name_2,out_dir_2,specs2,ranges2,dataset_names_2,dss=utils.parse_cfg(cfg_2)
+    dataset_name_2=dataset_names_2[0]
+    specs2,ranges2=remove_duplicated(specs2,ranges2)
     outfile_2 = out_dir_2+"/hmixfit-"+fit_name_2+"/analysis.root"
     
     do_comp=True
@@ -118,14 +144,13 @@ if (obj=="eff_group"):
     string_sel=None
     det_type="sum"
     det_types,namet,Ns= utils.get_det_types(det_type,string_sel,det_type_sel=det_sel,level_groups="cfg/level_groups_Sofia.json")
-    energy_low=2610
-    energy_high=2620
+ 
     regions ={"peak":[[energy_low,energy_high]],
             "left":[[energy_low-15,energy_low]],
             "right":[[energy_high,energy_high+15]]
             }
     spectrum="mul_surv" 
-    pdf_path = cfg["pdf-path"]
+    pdf_path = cfg["pdf-path"]+pdf_sub_path
     eff_total={}
     for det_name, det_info in det_types.items():
         
@@ -142,6 +167,16 @@ if (obj=="eff_group"):
 
         eff_total[det_name]=effs
 
+    for source in eff_total["all"]["peak"]:
+        if "outer" in source:
+            eff =eff_total["all"]["peak"][source]-(eff_total["all"]["left"][source]+eff_total["all"]["right"][source])*15/(2*(energy_high-energy_low))
+            print(f"Eficiency for {source} = {100*eff}")
+if (data_band==True):
+    if (obj=="eff_group"):
+        file = uproot.open(cfg["data-path"]+dss[idx])
+        data_counts =utils.get_data_counts_total(spectrum,det_types,regions,file,key_list=["left","right","peak"])
+    else:
+        raise NotImplementedError("Data band is only implemented for eff_groups option")
 #### get the priors
 #### ----------------------------------------
 
@@ -200,11 +235,15 @@ else:
 
 
 
-if (obj=="eff_groups"):
+if (obj=="eff_group"):
     obj=str(regions["peak"][0])
 
+path ="{}/{}/{}_{}_results.pdf".format(outdir,fit_name,obj,integral_type)
+if os.path.exists(path):
+    os.remove(path)
+
 #### normalise the dataframes
-with PdfPages("{}/{}/{}_{}_results.pdf".format(outdir,fit_name,obj,integral_type)) as pdf:
+with PdfPages(path) as pdf:
    
     for plot in list_of_plots:
 
@@ -245,9 +284,9 @@ with PdfPages("{}/{}/{}_{}_results.pdf".format(outdir,fit_name,obj,integral_type
         ### data into numpy array
         ### -----------------------
         if (type_plot!="eff_group"):
-            x,y,y_low,y_high,assay_norm=utils.get_data_numpy(type_plot,df_tot,name)
+            x,y,y_low,y_high,assay_norm=utils.get_data_numpy(type_plot,df_tot,name,type=types)
         else:
-            x,y,y_low,y_high,assay_norm=utils.get_data_numpy("parameter",df_tot,"M1")
+            x,y,y_low,y_high,assay_norm=utils.get_data_numpy("parameter",df_tot,"M1",type=types)
 
         if (type_plot=="parameter"):
             y/=31.5
@@ -257,25 +296,51 @@ with PdfPages("{}/{}/{}_{}_results.pdf".format(outdir,fit_name,obj,integral_type
         
         if (type_plot=="eff_group"):
             for id,n in enumerate(names):
-                eff = eff_total["all"]["peak"][n]
+                eff = (eff_total["all"]["peak"][n]-(eff_total["all"]["left"][n]+eff_total["all"]["right"][n])*15/(2*(energy_high-energy_low)))
+                if eff<0:
+                    eff=0
                 y[id]*=eff
                 y_low[id]*=eff
                 y_high[id]*=eff
                 assay_low[id]*=eff
                 assay_high[id]*=eff
                 assay_mean[id]*=eff
+        
+        if (data_band is not False):
+            band =utils.get_counts_minuit(np.array([data_counts["all"]["left"],
+                                                    data_counts["all"]["peak"],
+                                                    data_counts["all"]["right"]]),
+                                            np.array([energy_low-15,energy_low,energy_high,energy_high+15])
+                            
+                                                    )
+            band=(band[0]/livetime,band[1]/livetime,band[1]/livetime)
+        else:
+            band=None
 
+        if (norm):
+            y/=band[0]/100
+            y_low/=band[0]/100
+            y_high/=band[0]/100
+            assay_high/=band[0]/100
+            assay_low/=band[0]/100
+            assay_mean/=band[0]/100
+            band=(100,100*band[1]/band[0],100*band[2]/band[0])
+            obj="frac"
+            name =f"{energy_low} to {energy_high} keV "
         assay_high*=assay_norm
         assay_low*=assay_norm
         assay_mean*=assay_norm
 
-        print(assay_mean)
+       
+
+        
+
 
         if (do_comp==False):
             
             for ids in [np.arange(len(labels)),indexs["U"],indexs["Th"],indexs["K"]]:
-                utils.make_error_bar_plot(ids,labels,y,y_low,y_high,data=name,obj=regions["peak"][0],split_priors=True,has_prior=has_prior,
-                                        assay_mean=assay_mean,assay_low=assay_low,assay_high=assay_high)
+                utils.make_error_bar_plot(ids,labels,y,y_low,y_high,data=name,obj=obj,split_priors=False,has_prior=has_prior,
+                                        assay_mean=assay_mean,assay_low=assay_low,assay_high=assay_high,scale=scale,data_band=band)
 
                 if (save==True):
                     pdf.savefig()
@@ -283,18 +348,46 @@ with PdfPages("{}/{}/{}_{}_results.pdf".format(outdir,fit_name,obj,integral_type
                     plt.show()
             
         else:
-            x2,y2,y_low2,y_high2,assay_norm=utils.get_data_numpy(type_plot,df_tot2,name)
+            if (type_plot!="eff_group"):
+                x2,y2,y_low2,y_high2,assay_norm=utils.get_data_numpy(type_plot,df_tot2,name,type=types)
+            else:
+                x2,y2,y_low2,y_high2,assay_norm=utils.get_data_numpy("parameter",df_tot2,"M1",type=types)
 
             if (type_plot=="parameter"):
                 y2/=31.5
                 y_low2/=31.5
                 y_high2/=31.5
+            if (type_plot=="eff_group"):
+                for id,n in enumerate(names):
+                    eff = (eff_total["all"]["peak"][n]-(eff_total["all"]["left"][n]+eff_total["all"]["right"][n])*15/(2*(energy_high-energy_low)))
+                    if (eff<0):
+                        eff=0
+                    y2[id]*=eff
+                    y_low2[id]*=eff
+                    y_high2[id]*=eff
+
+            if (data_band is not False):
+                band =utils.get_counts_minuit(np.array([data_counts["all"]["left"],
+                                                    data_counts["all"]["peak"],
+                                                    data_counts["all"]["right"]]),
+                                            np.array([energy_low-15,energy_low,energy_high,energy_high+15])
+                            
+                                                    )
+                band=(band[0]/livetime,band[1]/livetime,band[1]/livetime)
+            else:
+                band=None
+
+            if (norm):
+                y2/=band[0]/100
+                y_low2/=band[0]/100
+                y_high2/=band[0]/100
+                band=(100,100*band[1]/band[0],100*band[2]/band[0])
             
             for ids in [np.arange(len(labels)),indexs["U"],indexs["Th"],indexs["K"]]:
                 utils.make_error_bar_plot(ids,labels,y,y_low,y_high,
                                           y2=y2,ylow2=y_low2,yhigh2=y_high2,
                                           data=name,obj=obj,do_comp=True,split_priors=False,has_prior=has_prior,
-                                        assay_mean=assay_mean,assay_low=assay_low,assay_high=assay_high,label1=l[0],label2=l[1])
+                                        assay_mean=assay_mean,assay_low=assay_low,assay_high=assay_high,label1=l[0],label2=l[1],data_band=band)
 
                 if (save==True):
                     pdf.savefig()
