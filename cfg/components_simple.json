@@ -1,17 +1,13 @@
 {
   "total_model": {
-    "hists": [
-      "total_model"
-    ],
+    "hists": ["total_model"],
     "style": {
       "label": "Model",
       "color": "#000000"
     }
   },
   "data": {
-    "hists": [
-      "fitted_data"
-    ],
+    "hists": ["fitted_data"],
     "style": {
       "label": "Data",
       "histtype": "fill",

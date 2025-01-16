@@ -25,10 +25,10 @@ void filter_mcmc(TString path)
    bool found=false;
    TString tree_name;
 
-   while ((key = (TKey*)nextkey()) && (found==false)) 
+   while ((key = (TKey*)nextkey()) && (found==false))
    {
         // Check if the key name contains the pattern "mcmc"
-        if (std::string(key->GetName()).find("mcmc") != std::string::npos) 
+        if (std::string(key->GetName()).find("mcmc") != std::string::npos)
          {
             tree_name =key->GetName();
          }
@@ -68,7 +68,7 @@ int main(int argc, char* argv[]) {
     }
 
    if (path!=nullptr)
-   {  
+   {
       filter_mcmc(*path);
    }
    else

@@ -1,30 +1,18 @@
 {
   "2vbb": {
-    "hists": [
-      "Nvbb_bege",
-      "Nvbb_icpc",
-      "Nvbb_coax",
-	"Nvbb_ppc",
-	"Nvbb"
-    ],
-      "style": {
-	            "linewidth":0.6,
+    "hists": ["Nvbb_bege", "Nvbb_icpc", "Nvbb_coax", "Nvbb_ppc", "Nvbb"],
+    "style": {
+      "linewidth": 0.6,
       "color": "#999933",
       "label": "$2\\nu\\beta\\beta$"
     }
   },
-     "alpha": {
-    "hists": [
-      "alpha_bege",
-      "alpha_icpc",
-      "alpha_coax",
-	"alpha_ppc",
-	"alpha"
-    ],
+  "alpha": {
+    "hists": ["alpha_bege", "alpha_icpc", "alpha_coax", "alpha_ppc", "alpha"],
     "style": {
-                "linewidth":0.6,
-	"label": "$\\alpha$",
-	"color":"orange"
+      "linewidth": 0.6,
+      "label": "$\\alpha$",
+      "color": "orange"
     }
   },
   "Th": {
@@ -36,12 +24,12 @@
       "Bi212Tl208_hpge_support_copper",
       "Bi212Tl208_mini_shroud",
       "Bi212Tl208_pen_plates",
-	"Bi212Tl208_wls_reflector",
-	"Ac228_pen_plates",
-	"Ac228_fiber_shroud"
+      "Bi212Tl208_wls_reflector",
+      "Ac228_pen_plates",
+      "Ac228_fiber_shroud"
     ],
-      "style": {
-	  "linewidth":0.6,
+    "style": {
+      "linewidth": 0.6,
       "color": "#33BBEE",
       "label": "Th"
     }
@@ -59,8 +47,8 @@
     ],
     "style": {
       "color": "#009988",
-	"label": "U",
-	          "linewidth":0.6
+      "label": "U",
+      "linewidth": 0.6
     }
   },
   "K40": {
@@ -68,64 +56,55 @@
       "K40_front_end_electronics",
       "K40_hpge_support_copper",
       "K40_pen_plates",
-	"K40_wls_reflector",
-	"K40_birds_nest",
-	"K40_cables",
-	"K40_fiber_shroud"
+      "K40_wls_reflector",
+      "K40_birds_nest",
+      "K40_cables",
+      "K40_fiber_shroud"
     ],
     "style": {
       "color": "#CC3311",
-	"label": "$^{40}$K",
-	          "linewidth":0.6
+      "label": "$^{40}$K",
+      "linewidth": 0.6
     }
   },
   "K42": {
     "hists": [
       "K42_homogeneous",
-	"K42_above",
-	"K42_inside",
-	"K42_outside",
-  "K42_outside_p10",
-	"K42_hpge_shell",
-	"K42_hpge_surface",
-	"K42_hpge_surface_icpc",
-	"K42_hpge_surface_bege",
-	"K42_hpge_surface_ppc",
-	"K42_hpge_surface_coax",
-	"K42_mini_shroud",
-  "K42_mini_shroud_p10",
-	"K42_cables"
+      "K42_above",
+      "K42_inside",
+      "K42_outside",
+      "K42_outside_p10",
+      "K42_hpge_shell",
+      "K42_hpge_surface",
+      "K42_hpge_surface_icpc",
+      "K42_hpge_surface_bege",
+      "K42_hpge_surface_ppc",
+      "K42_hpge_surface_coax",
+      "K42_mini_shroud",
+      "K42_mini_shroud_p10",
+      "K42_cables"
     ],
     "style": {
       "color": "#EE3377",
-	"label": "$^{42}$K",
-	          "linewidth":0.6
+      "label": "$^{42}$K",
+      "linewidth": 0.6
     }
   },
-    "Co60":{
-	"hists":
-	["Co60_cables",
-	 "Co60_hpge_support_copper"
-	],
-	"style":{          "linewidth":0.6,
-    "label":"$^{60}$Co"}
-    },
-    
-	    
+  "Co60": {
+    "hists": ["Co60_cables", "Co60_hpge_support_copper"],
+    "style": { "linewidth": 0.6, "label": "$^{60}$Co" }
+  },
+
   "total_model": {
-    "hists": [
-      "total_model"
-    ],
+    "hists": ["total_model"],
     "style": {
       "label": "Model",
       "color": "#000000"
     }
   },
-		
+
   "data": {
-    "hists": [
-      "fitted_data"
-    ],
+    "hists": ["fitted_data"],
     "style": {
       "label": "Data",
       "histtype": "fill",
@@ -134,4 +113,3 @@
     }
   }
 }
-

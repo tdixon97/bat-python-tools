@@ -1,46 +1,38 @@
 {
+  "components": [
+    {
+      "name": "Bi212Tl208_fiber_shroud",
+      "full-name": "Fiber Shroud",
+      "file": "l200a-fibers-Ra224-to-Pb208-tier_pdf.root",
+      "best_fit": 4.97e3,
+      "prior": "gaus:1,4.97E3,1.63E3",
+      "type": "icpms"
+    },
+    {
+      "name": "Bi212Tl208_fiber_copper",
+      "full-name": "Fiber Copper",
+      "file": "l200a-fiber-support-copper-Ra224-to-Pb208-tier_pdf.root",
+      "best_fit": 4.97e3,
+      "prior": "gaus:1,4.97E3,1.63E3",
+      "type": "icpms"
+    },
 
-   "components":
-   [    
-       
-         {
-             "name" : "Bi212Tl208_fiber_shroud",
-	         "full-name":"Fiber Shroud",
-            "file" : "l200a-fibers-Ra224-to-Pb208-tier_pdf.root",
-            "best_fit": 4.97E3,
-            "prior": "gaus:1,4.97E3,1.63E3",
-            "type":"icpms"    
-         },
-         {
-            "name" : "Bi212Tl208_fiber_copper",
-           "full-name":"Fiber Copper",
-           "file" : "l200a-fiber-support-copper-Ra224-to-Pb208-tier_pdf.root",
-           "best_fit": 4.97E3,
-           "prior": "gaus:1,4.97E3,1.63E3",
-           "type":"icpms"    
-        },
-       
-         {
-             "name" : "Pb214Bi214_fiber_shroud",
-	         "full-name":"Fiber Shroud",
-            "file" : "l200a-fibers-Rn222-to-Po214-tier_pdf.root",
-            "best_fit": 6.41E3,
-            "prior": "exp(-x*2.3/1.7E4)",
-            "type":"icpms"       
-         },
+    {
+      "name": "Pb214Bi214_fiber_shroud",
+      "full-name": "Fiber Shroud",
+      "file": "l200a-fibers-Rn222-to-Po214-tier_pdf.root",
+      "best_fit": 6.41e3,
+      "prior": "exp(-x*2.3/1.7E4)",
+      "type": "icpms"
+    },
 
-         {
-            "name" : "Pb214Bi214_fiber_copper",
-           "full-name":"Fiber Copper",
-           "file" : "l200a-fiber-support-copper-Rn222-to-Po214-tier_pdf.root",
-           "best_fit": 6.41E3,
-           "prior": "exp(-x*2.3/1.7E4)",
-           "type":"icpms"       
-        }
-       
-
-
-   ]
-
-
+    {
+      "name": "Pb214Bi214_fiber_copper",
+      "full-name": "Fiber Copper",
+      "file": "l200a-fiber-support-copper-Rn222-to-Po214-tier_pdf.root",
+      "best_fit": 6.41e3,
+      "prior": "exp(-x*2.3/1.7E4)",
+      "type": "icpms"
+    }
+  ]
 }

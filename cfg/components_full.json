@@ -1,11 +1,6 @@
 {
   "2vbb": {
-    "hists": [
-      "Nvbb_bege",
-      "Nvbb_icpc",
-      "Nvbb_coax",
-      "Nvbb_ppc"
-    ],
+    "hists": ["Nvbb_bege", "Nvbb_icpc", "Nvbb_coax", "Nvbb_ppc"],
     "style": {
       "color": "#999933",
       "label": "$2\\nu\\beta\\beta$"
@@ -69,27 +64,21 @@
     }
   },
   "Ar39": {
-    "hists": [
-      "Ar39_homogeneous"
-    ],
+    "hists": ["Ar39_homogeneous"],
     "style": {
       "color": "#5b2c6f",
       "label": "$^{39}$Ar"
     }
   },
   "total_model": {
-    "hists": [
-      "total_model"
-    ],
+    "hists": ["total_model"],
     "style": {
       "label": "Model",
       "color": "#000000"
     }
   },
   "data": {
-    "hists": [
-      "fitted_data"
-    ],
+    "hists": ["fitted_data"],
     "style": {
       "label": "Data",
       "histtype": "fill",

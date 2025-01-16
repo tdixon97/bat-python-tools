@@ -1,272 +1,265 @@
 {
+  "components": [
+    {
+      "name": "Bi212Tl208_cables",
+      "full-name": "HV & Sig. cables",
+      "file": "l200a-hv-signal-cables-Ra224-to-Pb208-tier_pdf.root",
+      "best_fit": 1.2e4,
+      "prior": "gaus:1,1.2E4,2.5E3",
+      "type": "hpge"
+    },
+    {
+      "name": "Bi212Tl208_hpge_support_copper",
+      "full-name": "HPGe Cu holders",
+      "file": "l200a-hpge-support-copper-Ra224-to-Pb208-tier_pdf.root",
+      "best_fit": 4.07e1,
+      "prior": "gaus:1,4.07E1,1.84E1",
+      "type": "icpms"
+    },
+    {
+      "name": "Bi212Tl208_fiber_shroud",
+      "full-name": "Fiber Shroud",
+      "file": "l200a-fibers-Ra224-to-Pb208-tier_pdf.root",
+      "best_fit": 1.1e4,
+      "prior": "gaus:1,1.1E4,0.2E4",
+      "type": "icpms"
+    },
+    {
+      "name": "Bi212Tl208_fiber_inner",
+      "full-name": "Fiber Shroud Inner",
+      "file": "l200a-fibers-inner-Ra224-to-Pb208-tier_pdf.root",
+      "best_fit": 1.1e4,
+      "prior": "gaus:1,1.1E4,0.2E4",
+      "type": "icpms"
+    },
+    {
+      "name": "Bi212Tl208_fiber_outer",
+      "full-name": "Fiber Shroud Outer",
+      "file": "l200a-fibers-outer-Ra224-to-Pb208-tier_pdf.root",
+      "best_fit": 1.1e4,
+      "prior": "gaus:1,1.1E4,0.2E4",
+      "type": "icpms"
+    },
+    {
+      "name": "Bi212Tl208_fiber_copper",
+      "full-name": "Fiber Copper",
+      "file": "l200a-fiber-support-copper-Ra224-to-Pb208-tier_pdf.root",
+      "best_fit": 4.97e3,
+      "prior": "gaus:1,4.97E3,1.63E3",
+      "type": "icpms"
+    },
+    {
+      "name": "Bi212Tl208_fiber_copper_inner",
+      "full-name": "Fiber Inner Copper",
+      "file": "l200a-fiber-inner-support-copper-Ra224-to-Pb208-tier_pdf.root",
+      "best_fit": 4.97e3,
+      "prior": "gaus:1,4.97E3,1.63E3",
+      "type": "icpms"
+    },
+    {
+      "name": "Bi212Tl208_fiber_copper_outer",
+      "full-name": "Fiber Outer Copper",
+      "file": "l200a-fiber-outer-support-copper-Ra224-to-Pb208-tier_pdf.root",
+      "best_fit": 4.97e3,
+      "prior": "gaus:1,4.97E3,1.63E3",
+      "type": "icpms"
+    },
+    {
+      "name": "Bi212Tl208_mini_shroud",
+      "full-name": "Mini-shrouds",
+      "file": "l200a-mini-shroud-Ra224-to-Pb208-tier_pdf.root",
+      "best_fit": 2.04e3,
+      "prior": "gaus:1,2.04E3,7.60E2",
+      "type": "icpms"
+    },
+    {
+      "name": "Bi212Tl208_calibration_tubes",
+      "full-name": "Calibration-Tubes",
+      "file": "l200a-calibration-tubes-Ra224-to-Pb208-tier_pdf.root",
+      "best_fit": 2.3e4,
+      "prior": "gaus:1,2.3E4,0.7E4",
+      "type": "icpms"
+    },
+    {
+      "name": "Bi212Tl208_pen_plates",
+      "full-name": "PEN plates",
+      "file": "l200a-pen-plates-Ra224-to-Pb208-tier_pdf.root",
+      "best_fit": 997,
+      "prior": "gaus:1,997,350",
+      "type": "hpge"
+    },
+    {
+      "name": "Bi212Tl208_birds_nest",
+      "full-name": "Birds nest (above array)",
+      "file": "l200a-birds-nest-Ra224-to-Pb208-tier_pdf.root",
+      "best_fit": 9.15e3,
+      "prior": "gaus:1,9.15E3,1.43E3",
+      "type": "estimate"
+    },
+    {
+      "name": "Bi212Tl208_front_end_electronics",
+      "full-name": "FE electronics",
+      "file": "l200a-front-end-electronics-Ra224-to-Pb208-tier_pdf.root",
+      "best_fit": 0,
+      "prior": "exp(-x*2.3/233)",
+      "type": "icpms"
+    },
+    {
+      "name": "Bi212Tl208_wls_reflector",
+      "full-name": "WLSR",
+      "file": "l200a-wls-reflector-Ra224-to-Pb208-tier_pdf.root",
+      "best_fit": 3.1e4,
+      "prior": "gaus:1,3.1E4,1.2E4",
+      "type": "hpge"
+    },
+    {
+      "name": "Bi212Tl208_sipm",
+      "full-name": "SiPM arrays",
+      "file": "l200a-sipm-arrays-Ra224-to-Pb208-tier_pdf.root",
+      "best_fit": 737,
+      "prior": "exp(-x*2.3/1.9E4)",
+      "type": "hpge"
+    },
+    {
+      "name": "Bi212Tl208_hpge_insulators",
+      "full-name": "HPGe insulators",
+      "file": "l200a-hpge-insulators-Ra224-to-Pb208-tier_pdf.root",
+      "best_fit": 660,
+      "prior": "gaus:1,660,220",
+      "type": "hpge"
+    },
+    {
+      "name": "Pb214Bi214_cables",
+      "full-name": "HV & Sig. cables",
+      "file": "l200a-hv-signal-cables-Rn222-to-Pb214-tier_pdf.root",
+      "best_fit": 1.4e4,
+      "prior": "gaus:1,1.4E4,2.5E3",
+      "type": "hpge"
+    },
+    {
+      "name": "Pb214Bi214_hpge_support_copper",
+      "full-name": "HPGe Cu holders",
 
-   "components":
-   [    
-        {
-            "name" : "Bi212Tl208_cables",
-	    "full-name":"HV & Sig. cables",
-            "file" : "l200a-hv-signal-cables-Ra224-to-Pb208-tier_pdf.root",
-            "best_fit": 1.2E4,
-            "prior": "gaus:1,1.2E4,2.5E3",
-            "type":"hpge"
-            },
-        {
-            "name" : "Bi212Tl208_hpge_support_copper",
-	    "full-name":"HPGe Cu holders",
-            "file" : "l200a-hpge-support-copper-Ra224-to-Pb208-tier_pdf.root",
-            "best_fit": 4.07E1,
-            "prior": "gaus:1,4.07E1,1.84E1",
-            "type":"icpms"  
-         },
-         {
-             "name" : "Bi212Tl208_fiber_shroud",
-	     "full-name":"Fiber Shroud",
-            "file" : "l200a-fibers-Ra224-to-Pb208-tier_pdf.root",
-            "best_fit": 1.1E4,
-            "prior": "gaus:1,1.1E4,0.2E4",
-            "type":"icpms"    
-         },
-         {
-             "name" : "Bi212Tl208_fiber_inner",
-             "full-name":"Fiber Shroud Inner",
-            "file" : "l200a-fibers-inner-Ra224-to-Pb208-tier_pdf.root",
-            "best_fit": 1.1E4,
-            "prior": "gaus:1,1.1E4,0.2E4",
-            "type":"icpms"
-         },
-          {
-             "name" : "Bi212Tl208_fiber_outer",
-             "full-name":"Fiber Shroud Outer",
-            "file" : "l200a-fibers-outer-Ra224-to-Pb208-tier_pdf.root",
-            "best_fit": 1.1E4,
-            "prior": "gaus:1,1.1E4,0.2E4",
-            "type":"icpms"
-         },
-         {
-             "name" : "Bi212Tl208_fiber_copper",
-             "full-name":"Fiber Copper",
-            "file" : "l200a-fiber-support-copper-Ra224-to-Pb208-tier_pdf.root",
-            "best_fit": 4.97E3,
-            "prior": "gaus:1,4.97E3,1.63E3",
-            "type":"icpms"
-         },
-          {
-             "name" : "Bi212Tl208_fiber_copper_inner",
-             "full-name":"Fiber Inner Copper",
-            "file" : "l200a-fiber-inner-support-copper-Ra224-to-Pb208-tier_pdf.root",
-            "best_fit": 4.97E3,
-            "prior": "gaus:1,4.97E3,1.63E3",
-            "type":"icpms"
-         },
-          {
-             "name" : "Bi212Tl208_fiber_copper_outer",
-             "full-name":"Fiber Outer Copper",
-            "file" : "l200a-fiber-outer-support-copper-Ra224-to-Pb208-tier_pdf.root",
-            "best_fit": 4.97E3,
-            "prior": "gaus:1,4.97E3,1.63E3",
-            "type":"icpms"
-         },
-         {
-             "name" : "Bi212Tl208_mini_shroud",
-	     "full-name":"Mini-shrouds",
-            "file" : "l200a-mini-shroud-Ra224-to-Pb208-tier_pdf.root",
-            "best_fit": 2.04E3,
-            "prior": "gaus:1,2.04E3,7.60E2",
-            "type":"icpms"
-         },
-         {
-            "name" : "Bi212Tl208_calibration_tubes",
-            "full-name":"Calibration-Tubes",
-           "file" : "l200a-calibration-tubes-Ra224-to-Pb208-tier_pdf.root",
-           "best_fit": 2.3E4,
-           "prior": "gaus:1,2.3E4,0.7E4",
-           "type":"icpms"
-        },
-         {
-             "name" : "Bi212Tl208_pen_plates",
-	     "full-name":"PEN plates",
-            "file" : "l200a-pen-plates-Ra224-to-Pb208-tier_pdf.root",
-            "best_fit": 997,
-            "prior": "gaus:1,997,350",
-            "type":"hpge"        
-         },
-         {
-             "name" : "Bi212Tl208_birds_nest",
-	     "full-name":"Birds nest (above array)",
-            "file" : "l200a-birds-nest-Ra224-to-Pb208-tier_pdf.root",
-            "best_fit": 9.15E3,
-            "prior": "gaus:1,9.15E3,1.43E3",
-            "type": "estimate"  
-         },
-         {
-             "name" : "Bi212Tl208_front_end_electronics",
-	     "full-name":"FE electronics",
-            "file" : "l200a-front-end-electronics-Ra224-to-Pb208-tier_pdf.root",
-            "best_fit": 0,
-            "prior": "exp(-x*2.3/233)",
-            "type":"icpms"        
-         },
-         {
-             "name" : "Bi212Tl208_wls_reflector",
-	     "full-name":"WLSR",
-             "file" : "l200a-wls-reflector-Ra224-to-Pb208-tier_pdf.root",
-             "best_fit": 3.1E4,
-            "prior": "gaus:1,3.1E4,1.2E4",
-             "type":"hpge"      
-         },
-         {
-             "name" : "Bi212Tl208_sipm",
-	     "full-name":"SiPM arrays",
-            "file" : "l200a-sipm-arrays-Ra224-to-Pb208-tier_pdf.root",
-            "best_fit": 737,
-            "prior": "exp(-x*2.3/1.9E4)",
-            "type":"hpge"      
-         },
-         {
-             "name" : "Bi212Tl208_hpge_insulators",
-	     "full-name":"HPGe insulators",
-            "file" : "l200a-hpge-insulators-Ra224-to-Pb208-tier_pdf.root",
-            "best_fit": 660,
-            "prior": "gaus:1,660,220" ,
-            "type":"hpge"       
-         },
-         {
-             "name" : "Pb214Bi214_cables",
-	     "full-name":"HV & Sig. cables",
-            "file" : "l200a-hv-signal-cables-Rn222-to-Pb214-tier_pdf.root",
-            "best_fit": 1.4E4,
-            "prior": "gaus:1,1.4E4,2.5E3",
-            "type":"hpge"        
-            },
-        {
-            "name" : "Pb214Bi214_hpge_support_copper",
-	    "full-name":"HPGe Cu holders",
+      "file": "l200a-hpge-support-copper-Rn222-to-Po214-tier_pdf.root",
+      "best_fit": 4.07e1,
+      "prior": "gaus:1,5.61E1,2.75E1",
+      "type": "icpms"
+    },
+    {
+      "name": "Pb214Bi214_fiber_shroud",
+      "full-name": "Fiber Shroud",
+      "file": "l200a-fibers-Rn222-to-Po214-tier_pdf.root",
+      "best_fit": 0.9e4,
+      "prior": "gaus:1,0.9E4,0.2E4",
+      "type": "icpms"
+    },
+    {
+      "name": "Pb214Bi214_fiber_inner",
+      "full-name": "Fiber Inner Shroud",
+      "file": "l200a-fibers-inner-Rn222-to-Po214-tier_pdf.root",
+      "best_fit": 0.9e4,
+      "prior": "gaus:1,0.9E4,0.2E4",
+      "type": "icpms"
+    },
+    {
+      "name": "Pb214Bi214_fiber_outer",
+      "full-name": "Fiber Shroud",
+      "file": "l200a-fibers-outer-Rn222-to-Po214-tier_pdf.root",
+      "best_fit": 0.9e4,
+      "prior": "gaus:1,0.9E4,0.2E4",
+      "type": "icpms"
+    },
+    {
+      "name": "Pb214Bi214_fiber_copper",
+      "full-name": "Fiber Copper",
+      "file": "l200a-fiber-support-copper-Rn222-to-Po214-tier_pdf.root",
+      "best_fit": 6.41e3,
+      "prior": "exp(-x*2.3/1.7E4)",
+      "type": "icpms"
+    },
+    {
+      "name": "Pb214Bi214_fiber_copper_outer",
+      "full-name": "Fiber Outer Copper",
+      "file": "l200a-fiber-outer-support-copper-Rn222-to-Po214-tier_pdf.root",
+      "best_fit": 6.41e3,
+      "prior": "exp(-x*2.3/1.7E4)",
+      "type": "icpms"
+    },
+    {
+      "name": "Pb214Bi214_fiber_copper_inner",
+      "full-name": "Fiber Copper Inner",
+      "file": "l200a-fiber-inner-support-copper-Rn222-to-Po214-tier_pdf.root",
+      "best_fit": 6.41e3,
+      "prior": "exp(-x*2.3/1.7E4)",
+      "type": "icpms"
+    },
+    {
+      "name": "Pb214Bi214_mini_shroud",
+      "full-name": "Mini-shrouds",
 
-            "file" : "l200a-hpge-support-copper-Rn222-to-Po214-tier_pdf.root",
-            "best_fit": 4.07E1,
-            "prior": "gaus:1,5.61E1,2.75E1",
-            "type":"icpms"        
-         },
-         {
-             "name" : "Pb214Bi214_fiber_shroud",
-	     "full-name":"Fiber Shroud",
-            "file" : "l200a-fibers-Rn222-to-Po214-tier_pdf.root",
-            "best_fit": 0.9E4,
-            "prior": "gaus:1,0.9E4,0.2E4",
-            "type":"icpms"       
-         },
-         {
-             "name" : "Pb214Bi214_fiber_inner",
-             "full-name":"Fiber Inner Shroud",
-            "file" : "l200a-fibers-inner-Rn222-to-Po214-tier_pdf.root",
-            "best_fit": 0.9E4,
-            "prior": "gaus:1,0.9E4,0.2E4",
-            "type":"icpms"
-         },
-         {
-             "name" : "Pb214Bi214_fiber_outer",
-             "full-name":"Fiber Shroud",
-            "file" : "l200a-fibers-outer-Rn222-to-Po214-tier_pdf.root",
-            "best_fit": 0.9E4,
-            "prior": "gaus:1,0.9E4,0.2E4",
-            "type":"icpms"
-         },
-       {
-             "name" : "Pb214Bi214_fiber_copper",
-             "full-name":"Fiber Copper",
-            "file" : "l200a-fiber-support-copper-Rn222-to-Po214-tier_pdf.root",
-            "best_fit": 6.41E3,
-            "prior": "exp(-x*2.3/1.7E4)",
-            "type":"icpms"
-       },
-          {
-             "name" : "Pb214Bi214_fiber_copper_outer",
-             "full-name":"Fiber Outer Copper",
-            "file" : "l200a-fiber-outer-support-copper-Rn222-to-Po214-tier_pdf.root",
-            "best_fit": 6.41E3,
-            "prior": "exp(-x*2.3/1.7E4)",
-            "type":"icpms"
-          },
-          {
-             "name" : "Pb214Bi214_fiber_copper_inner",
-             "full-name":"Fiber Copper Inner",
-            "file" : "l200a-fiber-inner-support-copper-Rn222-to-Po214-tier_pdf.root",
-            "best_fit": 6.41E3,
-            "prior": "exp(-x*2.3/1.7E4)",
-            "type":"icpms"
-         },
-         {
-             "name" : "Pb214Bi214_mini_shroud",
-	     "full-name":"Mini-shrouds",
+      "file": "l200a-mini-shroud-Rn222-to-Po214-tier_pdf.root",
+      "best_fit": 2.04e3,
+      "prior": "gaus:1,2.97E3,1.27E3",
+      "type": "icpms"
+    },
+    {
+      "name": "Pb214Bi214_calibration_tubes",
+      "full-name": "Calibration-Tubes",
 
-            "file" : "l200a-mini-shroud-Rn222-to-Po214-tier_pdf.root",
-            "best_fit": 2.04E3,
-            "prior": "gaus:1,2.97E3,1.27E3",
-            "type":"icpms"        
-         },
-         {
-            "name" : "Pb214Bi214_calibration_tubes",
-            "full-name":"Calibration-Tubes",
+      "file": "l200a-calibration-tubes-Rn222-to-Po214-tier_pdf.root",
+      "best_fit": 1.1e4,
+      "prior": "gaus:1,1.1E4,0.7E4",
+      "type": "icpms"
+    },
+    {
+      "name": "Pb214Bi214_pen_plates",
+      "full-name": "PEN plates",
+      "file": "l200a-pen-plates-Rn222-to-Po214-tier_pdf.root",
+      "best_fit": 2000,
+      "prior": "gaus:1,1995,432",
+      "type": "hpge"
+    },
+    {
+      "name": "Pb214Bi214_birds_nest",
+      "full-name": "Birds nest (above array)",
+      "file": "l200a-birds-nest-Rn222-to-Po214-tier_pdf.root",
+      "best_fit": 1.28e4,
+      "prior": "gaus:1,1.28E4,1.10E3",
+      "type": "estimate"
+    },
+    {
+      "name": "Pb214Bi214_front_end_electronics",
+      "full-name": "FE electronics",
 
-           "file" : "l200a-calibration-tubes-Rn222-to-Po214-tier_pdf.root",
-           "best_fit": 1.1E4,
-           "prior": "gaus:1,1.1E4,0.7E4",
-           "type":"icpms"
-        },
-         {
-             "name" : "Pb214Bi214_pen_plates",
-	     "full-name":"PEN plates",
-            "file" : "l200a-pen-plates-Rn222-to-Po214-tier_pdf.root",
-            "best_fit": 2000,
-            "prior": "gaus:1,1995,432",
-            "type":"hpge"       
-         },
-         {
-            "name" : "Pb214Bi214_birds_nest",
-	     "full-name":"Birds nest (above array)",
-             "file" : "l200a-birds-nest-Rn222-to-Po214-tier_pdf.root",
-            "best_fit": 1.28E4,
-            "prior": "gaus:1,1.28E4,1.10E3",
-            "type":"estimate"        
-         },
-         {
-             "name" : "Pb214Bi214_front_end_electronics",
-	     "full-name":"FE electronics",
+      "file": "l200a-front-end-electronics-Rn222-to-Po214-tier_pdf.root",
+      "best_fit": 960,
+      "prior": "gaus:1,960,120",
+      "type": "icpms"
+    },
+    {
+      "name": "Pb214Bi214_wls_reflector",
+      "file": "l200a-wls-reflector-Rn222-to-Po214-tier_pdf.root",
+      "best_fit": 0,
+      "full-name": "WLSR",
 
-            "file" : "l200a-front-end-electronics-Rn222-to-Po214-tier_pdf.root",
-            "best_fit": 960,
-            "prior": "gaus:1,960,120",
-            "type":"icpms"      
-         },
-         {
-            "name" : "Pb214Bi214_wls_reflector",
-            "file" : "l200a-wls-reflector-Rn222-to-Po214-tier_pdf.root",
-             "best_fit": 0,
-	     "full-name":"WLSR",
-
-            "prior": "gaus:1,0,7.7E4",
-            "type":"hpge"       
-         },
-         {
-            "name" : "Pb214Bi214_sipm",
-	     "full-name":"SiPM arrays",
-	     "file" : "l200a-sipm-arrays-Rn222-to-Po214-tier_pdf.root",
-            "best_fit": 0,
-            "prior": "exp(-x*2.3/3.4E4)",
-            "type":"hpge"
-         },
-         {
-             "name" : "Pb214Bi214_hpge_insulators",
-	     "full-name":"HPGe insulators",
-            "file" : "l200a-hpge-insulators-Rn222-to-Po214-tier_pdf.root",
-            "best_fit": 705,
-            "prior": "gaus:1,705,130",
-            "type":"hpge"        
-         }
-
-
-
-   ]
-
-
+      "prior": "gaus:1,0,7.7E4",
+      "type": "hpge"
+    },
+    {
+      "name": "Pb214Bi214_sipm",
+      "full-name": "SiPM arrays",
+      "file": "l200a-sipm-arrays-Rn222-to-Po214-tier_pdf.root",
+      "best_fit": 0,
+      "prior": "exp(-x*2.3/3.4E4)",
+      "type": "hpge"
+    },
+    {
+      "name": "Pb214Bi214_hpge_insulators",
+      "full-name": "HPGe insulators",
+      "file": "l200a-hpge-insulators-Rn222-to-Po214-tier_pdf.root",
+      "best_fit": 705,
+      "prior": "gaus:1,705,130",
+      "type": "hpge"
+    }
+  ]
 }
