@@ -1381,8 +1381,20 @@ def plot_relative_intensities(outputs, data, data_err, orders, title, savepath, 
     plt.savefig(savepath)
 
 
-def normalized_poisson_residual(mu, obs):
-    """ " code to compute normalised poisson residuals"""
+def normalized_poisson_residual(mu:np.ndarray, obs:np.ndarray)->np.ndarray:
+    """ Compute normalised poisson residuals.
+
+    For mu > 50 a Gaussian approximation is employed. When mu is less
+    than 50, the tail probability is calculated integrating from the mode,
+    this is used to calculate a p-value then converted into a residual.
+
+    Parameters
+    ----------
+    mu   
+        The model predictions.
+    obs
+        The observed data.
+    """
 
     if obs < 1:
         obs = 0
